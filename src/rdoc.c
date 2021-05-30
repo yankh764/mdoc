@@ -17,14 +17,9 @@
 #include <sys/types.h>
 #include "rdoc.h"
 
-
-enum magic_numbers {
-	doc_name_len = 300, 
-};
-
 /* Functions Prototype */
 static struct users_configs *input_configs();
-static struct l_list *alloc_l_list_obj(unsigned int);
+static struct l_list *alloc_l_list_obj(size_t);
 static struct l_list *search(const char *, const char *);
 //static struct l_list *search_recursively(DIR *, struct l_list *, const char *);
 
@@ -77,11 +72,11 @@ int generate_config(const char *abs_config_path) {
 	retval = 0;
 	
 	Out:
-		if(configs)
-			free(configs);
 		if(fp)
 			if(fclose(fp))
-				retval = -1; 
+				retval = -1;
+		if(configs)
+			free(configs); 
 
 		return retval;
 }
@@ -114,13 +109,13 @@ int read_configs(const char *abs_config_path, struct users_configs *configs) {
 * Return a pointer to allocated l_list structure that also 
 * has an allocated obj to it with the size of obj_size.
 */
-static struct l_list *alloc_l_list_obj(unsigned int obj_size) {
+static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *ptr;
 
 	if(!(ptr = malloc(sizeof(struct l_list))))
 		goto Error;
 	
-	if(!(ptr->obj = malloc(obj_size)))
+	if(!(ptr->obj = (char *) malloc(obj_size)))
 		goto Error;
 
 	return ptr;
@@ -133,15 +128,14 @@ static struct l_list *alloc_l_list_obj(unsigned int obj_size) {
 }
 
 void free_l_list(struct l_list *ptr) {
-	struct l_list *current_ptr = ptr;
 	struct l_list *prev_ptr;
 
-	while(current_ptr) {
-		if(current_ptr->obj)
-			free(current_ptr->obj);
+	while(ptr) {
+		if(ptr->obj)
+			free(ptr->obj);
 		
-		prev_ptr = current_ptr;
-		current_ptr = current_ptr->next;
+		prev_ptr = ptr;
+		ptr = ptr->next;
 		
 		free(prev_ptr);
 	}
@@ -150,20 +144,17 @@ void free_l_list(struct l_list *ptr) {
 static struct l_list *search(const char *dir_path, const char *str) {
 	const unsigned int dir_path_len = strlen(dir_path);
 	unsigned int new_path_len;
+	struct l_list *doc_list = NULL;
 	struct l_list *retval = NULL;
-	struct l_list *doc_list, *ptr;
+	struct l_list *ptr;
 	struct dirent *entry;
 	struct stat stbuf;
 	char *new_path;
+	size_t obj_len;
 	DIR *dp;
 
-	if(!(dp = opendir(dir_path)))
+	if(!(dp = opendir(dir_path))) 
 		goto Out;
-
-	if(!(doc_list = alloc_l_list_obj(doc_name_len)))
-		goto Out;
-	
-	ptr = doc_list;
 
 	while((entry = readdir(dp))) {
 		/* Skip current and pervious directory entries and files
@@ -177,7 +168,8 @@ static struct l_list *search(const char *dir_path, const char *str) {
 			goto CleanUp;
 
 		snprintf(new_path, new_path_len, "%s/%s", dir_path, entry->d_name);
-		if(!(stat(new_path, &stbuf)))
+
+		if((stat(new_path, &stbuf)))
 			goto CleanUp;
 		
 		free(new_path);
@@ -186,14 +178,24 @@ static struct l_list *search(const char *dir_path, const char *str) {
 		if(!S_ISREG(stbuf.st_mode))
 			continue; 
 
-		if(!ptr)
-			if(!(ptr = alloc_l_list_obj(doc_name_len)))
-				goto CleanUp;
+		obj_len = strlen(entry->d_name) + 1;
+		if(!doc_list) {
+			if(!(doc_list = alloc_l_list_obj(obj_len)))
+				goto Out;
+			
+			snprintf(doc_list->obj, obj_len, "%s", entry->d_name);
+			ptr = doc_list;
+			continue;
+		}
 
-		snprintf(ptr->obj, doc_name_len, "%s", entry->d_name);
-		ptr = ptr->next;
+		ptr = ptr->next = alloc_l_list_obj(obj_len);
+		if(!ptr)
+			goto CleanUp;
+
+		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
 	}
-	if(errno)
+
+	if(errno) 
 		goto CleanUp;
 
 	retval = doc_list;
@@ -201,14 +203,21 @@ static struct l_list *search(const char *dir_path, const char *str) {
 	Out:
 		if(dp)
 			if(closedir(dp))
-				retval = NULL;
-
+				// If cleanup haven't been already done jump to CleanUp and do it.
+				if(retval) {  
+					dp = NULL;
+					retval = NULL;
+					goto CleanUp;
+				}
+	
 		return retval;
 
 	CleanUp:
 		if(new_path)
 			free(new_path);
-		free_l_list(doc_list);
+
+		if(doc_list)
+			free_l_list(doc_list);
 
 		goto Out;
 }
@@ -217,13 +226,14 @@ static struct l_list *search(const char *dir_path, const char *str) {
 * The function will search the passed str sequence in all the 
 * existing documents in the documents directory. 
 */
-int search_for_doc(const char *docs_dir_path, const char *str, unsigned int recursive) {
+struct l_list *search_for_doc(const char *docs_dir_path, const char *str, unsigned int recursive) {
 
 	if(recursive) {
 		;
 	}
 	else {
-		search(docs_dir_path, doc, str);
+		;
 	}
-	return 0;
+
+	return search(docs_dir_path, str);
 }
