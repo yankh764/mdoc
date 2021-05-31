@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
@@ -20,7 +21,9 @@
 /* Functions Prototype */
 static struct users_configs *input_configs();
 static struct l_list *alloc_l_list_obj(size_t);
-static struct l_list *search(const char *, const char *);
+static struct l_list *search(const char *, const char *, unsigned int);
+static int strstr_i(const char *, const char *);
+static char *convert_to_lower(char *);
 //static struct l_list *search_recursively(DIR *, struct l_list *, const char *);
 
 /*                                                                   
@@ -45,7 +48,6 @@ static struct users_configs *input_configs() {
 	return input;
 
 	Error:
-		printf("Error\n");
 		if(input)
 			free(input);
 		return NULL;
@@ -141,7 +143,8 @@ void free_l_list(struct l_list *ptr) {
 	}
 }
 
-static struct l_list *search(const char *dir_path, const char *str) {
+static struct l_list *search(const char *dir_path, const char *str,
+							unsigned int ignore_case) {
 	const unsigned int dir_path_len = strlen(dir_path);
 	unsigned int new_path_len;
 	struct l_list *doc_list = NULL;
@@ -150,6 +153,7 @@ static struct l_list *search(const char *dir_path, const char *str) {
 	struct dirent *entry;
 	struct stat stbuf;
 	char *new_path;
+	int status;
 	size_t obj_len;
 	DIR *dp;
 
@@ -157,12 +161,22 @@ static struct l_list *search(const char *dir_path, const char *str) {
 		goto Out;
 
 	while((entry = readdir(dp))) {
-		/* Skip current and pervious directory entries and files
-		   that don't have an substring occurrence of str        */ 
-		if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..") 
-			|| !strstr(entry->d_name, str))
+		/* Skip current and pervious directory entries. */ 
+		if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
 			continue;
 		
+		if(ignore_case) {
+			status = strstr_i(entry->d_name, str);
+			if(status == -1)
+				goto CleanUp;
+
+			else if(status == 0)
+				continue;
+		}
+		else
+			if(!strstr(entry->d_name, str))
+				continue;
+
 		new_path_len = dir_path_len + strlen(entry->d_name) + 2;
 		if(!(new_path = (char *) malloc(new_path_len)))
 			goto CleanUp;
@@ -208,8 +222,7 @@ static struct l_list *search(const char *dir_path, const char *str) {
 					dp = NULL;
 					retval = NULL;
 					goto CleanUp;
-				}
-	
+				}	
 		return retval;
 
 	CleanUp:
@@ -222,11 +235,58 @@ static struct l_list *search(const char *dir_path, const char *str) {
 		goto Out;
 }
 
+static char *convert_to_lower(char *str) {
+	size_t len = strlen(str) + 1;
+	unsigned int i;
+	char *str_c; // Copy of str
+
+	if((str_c = (char *) malloc(len))) {
+		for(i=0; str[i]!='\0'; i++) {
+			if(isupper(str[i]))
+				str_c[i] = tolower(str[i]);
+			else
+				str_c[i] = str[i];
+		}
+		str_c[i] = '\0';
+	}
+	
+	return str_c;
+}
+
+/*
+* The same as strstr() but with ignored case distinction
+* and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
+*/
+static int strstr_i(const char *haystack, const char *needle) {
+	int retval = -1;
+	char *haystack_c, *needle_c; 
+	
+	if(!(haystack_c = convert_to_lower((char *) haystack)))
+		goto Out;
+
+	if(!(needle_c = convert_to_lower((char *) needle)))
+		goto Out;
+	
+	if(strstr(haystack_c, needle_c))
+		retval = 1;
+	else 
+		retval = 0;
+
+	Out:
+		if(haystack_c)
+			free(haystack_c);	
+		if(needle_c)
+			free(needle_c);
+
+		return retval;
+}
+
 /*
 * The function will search the passed str sequence in all the 
 * existing documents in the documents directory. 
 */
-struct l_list *search_for_doc(const char *docs_dir_path, const char *str, unsigned int recursive) {
+struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
+							  unsigned int ignore_case, unsigned int recursive) {
 
 	if(recursive) {
 		;
@@ -235,5 +295,5 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str, unsign
 		;
 	}
 
-	return search(docs_dir_path, str);
+	return search(docs_dir_path, str, ignore_case);
 }
