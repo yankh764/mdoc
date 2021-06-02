@@ -21,10 +21,10 @@
 /* Functions Prototype */
 static struct users_configs *input_configs();
 static struct l_list *alloc_l_list_obj(size_t);
-static struct l_list *search(const char *, const char *, unsigned int);
-static int strstr_i(const char *, const char *);
 static char *convert_to_lower(char *);
-//static struct l_list *search_recursively(DIR *, struct l_list *, const char *);
+static int strstr_i(const char *, const char *);
+static struct l_list *search(const char *, const char *, unsigned int);
+static struct l_list *search_recursively(const char *, const char *, unsigned int);
 
 /*                                                                   
 * This function will ask the user 2 questions. The first one is the 
@@ -143,19 +143,26 @@ void free_l_list(struct l_list *ptr) {
 	}
 }
 
-static struct l_list *search(const char *dir_path, const char *str,
-							unsigned int ignore_case) {
+/*
+ * The function will pass all the founded books to the doc_list.
+ * The doc_list needs to be allocated with alloc_l_list_obj(), if not 
+ * the funtion will return failure.
+ */
+static int search(struct l_list *doc_list, const char *dir_path, 
+				  const char *str, unsigned int ignore_case) {
 	const unsigned int dir_path_len = strlen(dir_path);
+	int retval = -1;
 	unsigned int new_path_len;
-	struct l_list *doc_list = NULL;
-	struct l_list *retval = NULL;
-	struct l_list *ptr;
+	struct l_list *ptr = doc_list;
 	struct dirent *entry;
 	struct stat stbuf;
 	char *new_path;
 	int status;
 	size_t obj_len;
 	DIR *dp;
+ 
+	if(!doc_list || !doc_list->obj)
+ 		goto Out;
 
 	if(!(dp = opendir(dir_path))) 
 		goto Out;
@@ -193,22 +200,12 @@ static struct l_list *search(const char *dir_path, const char *str,
 			continue; 
 
 		obj_len = strlen(entry->d_name) + 1;
-		if(!doc_list) {
-			if(!(doc_list = alloc_l_list_obj(obj_len)))
-				goto Out;
-			
-			snprintf(doc_list->obj, obj_len, "%s", entry->d_name);
-			ptr = doc_list;
-			continue;
-		}
-
 		ptr = ptr->next = alloc_l_list_obj(obj_len);
 		if(!ptr)
 			goto CleanUp;
 
 		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
 	}
-
 	if(errno) 
 		goto CleanUp;
 
@@ -222,19 +219,36 @@ static struct l_list *search(const char *dir_path, const char *str,
 					dp = NULL;
 					retval = NULL;
 					goto CleanUp;
-				}	
+				}
+
 		return retval;
 
 	CleanUp:
 		if(new_path)
 			free(new_path);
-
 		if(doc_list)
 			free_l_list(doc_list);
 
 		goto Out;
 }
 
+static int search_recursively(struct l_list *doc_list, const char *dir_path, 
+							  const char *str, unsigned int ignore_case) {
+	const unsigned int dir_path_len = strlen(dir_path);
+	unsigned int new_path_len;
+	struct l_list *ptr;
+	struct dirent *entry;
+	struct stat stbuf;
+	int retval = -1;
+	int status;
+	char *new_path;
+	size_t obj_len;
+	DIR *dp;
+}
+
+/*
+* Make a small letters copy of str.
+*/
 static char *convert_to_lower(char *str) {
 	size_t len = strlen(str) + 1;
 	unsigned int i;
@@ -259,24 +273,24 @@ static char *convert_to_lower(char *str) {
 */
 static int strstr_i(const char *haystack, const char *needle) {
 	int retval = -1;
-	char *haystack_c, *needle_c; 
+	char *haystack_l, *needle_l; 
 	
-	if(!(haystack_c = convert_to_lower((char *) haystack)))
+	if(!(haystack_l = convert_to_lower((char *) haystack)))
 		goto Out;
 
-	if(!(needle_c = convert_to_lower((char *) needle)))
+	if(!(needle_l = convert_to_lower((char *) needle)))
 		goto Out;
 	
-	if(strstr(haystack_c, needle_c))
+	if(strstr(haystack_l, needle_l))
 		retval = 1;
 	else 
 		retval = 0;
 
 	Out:
-		if(haystack_c)
-			free(haystack_c);	
-		if(needle_c)
-			free(needle_c);
+		if(haystack_l)
+			free(haystack_l);	
+		if(needle_l)
+			free(needle_l);
 
 		return retval;
 }
@@ -285,8 +299,8 @@ static int strstr_i(const char *haystack, const char *needle) {
 * The function will search the passed str sequence in all the 
 * existing documents in the documents directory. 
 */
-struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
-							  unsigned int ignore_case, unsigned int recursive) {
+struct l_list *search_for_doc(const char *docs_dir_path, const char *str, 
+			   				  unsigned int ignore_case, unsigned int recursive) {
 
 	if(recursive) {
 		;
