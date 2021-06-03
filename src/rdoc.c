@@ -18,18 +18,20 @@
 #include <sys/types.h>
 #include "rdoc.h"
 
-/* Functions Prototype */
+
+/* Static Functions Prototype */
 static struct users_configs *input_configs();
 static struct l_list *alloc_l_list_obj(size_t);
 static struct l_list *search(const char *, const char *, unsigned int);
 static char *convert_to_lower(char *);
 static int strstr_i(const char *, const char *);
+static char *get_entry_path(const char *, const char *);
 
 /*                                                                   
-* This function will ask the user 2 questions. The first one is the 
-* documents directory absolute path. Second is the pdf viewer's name.
-* Then it'll take the user's answers as an input.
-*/
+ * This function will ask the user 2 questions. The first one is the 
+ * documents directory absolute path. Second is the pdf viewer's name.
+ * Then it'll take the user's answers as an input.
+ */
 static struct users_configs *input_configs() { 
 	struct users_configs *input; 
 
@@ -53,9 +55,9 @@ static struct users_configs *input_configs() {
 }
 
 /*
-* The function will generate the configurations according to the 
-* user's answers.
-*/
+ * The function will generate the configurations according to the 
+ * user's answers.
+ */
 int generate_config(const char *abs_config_path) {
 	struct users_configs *configs;
 	int retval = -1;
@@ -107,9 +109,9 @@ int read_configs(const char *abs_config_path, struct users_configs *configs) {
 }
 
 /*
-* Return a pointer to allocated l_list structure that also 
-* has an allocated obj to it with the size of obj_size.
-*/
+ * Return a pointer to allocated l_list structure that also 
+ * has an allocated obj to it with the size of obj_size.
+ */
 static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *ptr;
 
@@ -183,10 +185,6 @@ static struct l_list *search(const char *dir_path, const char *str, unsigned int
 		if((stat(new_path, &stbuf)))
 			goto CleanUp;
 		
-		if(S_ISDIR(stbuf.stmode)) {
-			doc_list->next = search(new_path, str, ignore_case);
-		}
-
 		free(new_path);
 		new_path = NULL;
 
@@ -236,31 +234,9 @@ static struct l_list *search(const char *dir_path, const char *str, unsigned int
 		goto Out;
 }
 
-/*static struct l_list *search_recursively(const char *dir_path, const char *str,
-										 unsigned int ignore_case) {
-	const size_t dir_path_len = strlen(dir_path); 
-	struct l_list *doc_list = NULL;
-	struct l_list *retval = NULL;
-	struct l_list *ptr;
-	struct dirent *entry;
-	struct stat stbuf;
-	size_t new_path_len;
-	size_t obj_len;
-	char *new_path;
-	int status;
-	DIR *dp;
-
-	if(!(dp = opendir(dir_path)))
-		goto Out;
-
-	while((entry = readdir(dp))) {
-
-	}
-}*/
-
 /*
-* Make a small letters copy of str.
-*/
+ * Make a small letters copy of str.
+ */
 static char *convert_to_lower(char *str) {
 	size_t len = strlen(str) + 1;
 	unsigned int i;
@@ -280,9 +256,9 @@ static char *convert_to_lower(char *str) {
 }
 
 /*
-* The same as strstr() but with ignored case distinction
-* and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
-*/
+ * The same as strstr() but with ignored case distinction
+ * and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
+ */
 static int strstr_i(const char *haystack, const char *needle) {
 	int retval = -1;
 	char *haystack_l, *needle_l; 
@@ -307,18 +283,137 @@ static int strstr_i(const char *haystack, const char *needle) {
 		return retval;
 }
 
+static char *get_entry_path(const char *dir_path, const char *entry_name) {
+    const size_t path_len = strlen(dir_path) + strlen(entry_name) + 2;
+    char *entry_path;
+
+    entry_path = (char *) malloc(path_len);
+    if(entry_path)
+        snprintf(entry_path, path_len, "%s/%s", dir_path, entry_name);
+
+    return entry_path;
+}
+
 /*
-* The function will search the passed str sequence in all the 
-* existing documents in the documents directory. 
-*/
+ * The function will search the passed str sequence in all the 
+ * existing documents in the documents directory. 
+ */
 struct l_list *search_for_doc(const char *docs_dir_path, const char *str, 
 			   				  unsigned int ignore_case, unsigned int recursive) {
-	struct l_list *x;
-	if(recursive) {
+	struct l_list *doc_list_begin, *doc_list_rec_begin, *retval;
+	struct l_list *ptr, *ptr_rec;
+	struct dirent *entry;
+	struct stat stbuf;
+	size_t obj_len;
+	char *new_path;
+	int status;
+	DIR *dp;
+     
+	doc_list_begin = doc_list_rec_begin = retval = NULL;
+    if(!(dp = opendir(docs_dir_path))) 
+		goto Out;
+
+	while((entry = readdir(dp))) {
+		/* Skip current and pervious directory entries. */ 
+		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			continue;
 		
-	
+		if(!(new_path = get_entry_path(docs_dir_path, entry->d_name))) 
+			goto CleanUp;
+
+		if(stat(new_path, &stbuf))
+			goto CleanUp;
+		
+		obj_len = strlen(entry->d_name) + 1;
+		if(recursive) {
+			if(S_ISDIR(stbuf.st_mode)) {	
+				if(!doc_list_rec_begin) {
+                    if(!(doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive)))
+                        goto CleanUp;
+
+                    ptr_rec = doc_list_rec_begin;
+                }
+                else {
+                    ptr_rec = ptr_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
+                    if(!ptr_rec)
+					    goto CleanUp;
+                }
+
+			free(new_path);
+		    continue;
+            }
+        }
+		free(new_path);
+		new_path = NULL;
+
+		if(!S_ISREG(stbuf.st_mode))
+			continue; 
+		
+		if(ignore_case) {
+			status = strstr_i(entry->d_name, str);	
+			
+			if(status == -1)
+				goto CleanUp;
+			else if(status == 0)
+				continue;
+		}
+		else 
+			if(!strstr(entry->d_name, str))
+				continue;
+
+		if(!doc_list_begin) {
+			if(!(doc_list_begin = alloc_l_list_obj(obj_len)))
+				goto CleanUp;
+
+			snprintf(doc_list_begin->obj, obj_len, "%s", entry->d_name);
+			ptr = doc_list_begin;	
+			continue;
+		}
+
+		ptr = ptr->next = alloc_l_list_obj(obj_len);
+		if(!ptr)
+			goto CleanUp;
+
+		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
 	}
+
+	if(errno) 
+		goto CleanUp;
+
+	/* Determine the right retval */
+	if(doc_list_begin) {
+		if(doc_list_rec_begin)
+			ptr->next = doc_list_rec_begin;
 		
-	else
-		return search(docs_dir_path, str, ignore_case);
+		retval = doc_list_begin;
+	} 
+	
+	else if(doc_list_rec_begin)
+		retval = doc_list_rec_begin;
+	
+	else 
+		goto CleanUp;
+
+
+	Out:
+		if(dp)
+			if(closedir(dp))
+				// If cleanup haven't been already done jump to CleanUp and do it.
+				if(retval) {  
+					dp = NULL;
+					retval = NULL;
+					goto CleanUp;
+				}
+
+		return retval;
+
+	CleanUp:
+		if(new_path)
+			free(new_path);
+		if(doc_list_begin)
+			free_l_list(doc_list_begin);
+		if(doc_list_rec_begin)
+			free_l_list(doc_list_rec_begin);
+
+		goto Out;
 }
