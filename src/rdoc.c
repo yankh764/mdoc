@@ -21,10 +21,9 @@
 /* Functions Prototype */
 static struct users_configs *input_configs();
 static struct l_list *alloc_l_list_obj(size_t);
+static struct l_list *search(const char *, const char *, unsigned int);
 static char *convert_to_lower(char *);
 static int strstr_i(const char *, const char *);
-static struct l_list *search(const char *, const char *, unsigned int);
-static struct l_list *search_recursively(const char *, const char *, unsigned int);
 
 /*                                                                   
 * This function will ask the user 2 questions. The first one is the 
@@ -143,27 +142,19 @@ void free_l_list(struct l_list *ptr) {
 	}
 }
 
-/*
- * The function will pass all the founded books to the doc_list.
- * The doc_list needs to be allocated with alloc_l_list_obj(), if not 
- * the funtion will return failure.
- */
-static int search(struct l_list *doc_list, const char *dir_path, 
-				  const char *str, unsigned int ignore_case) {
-	const unsigned int dir_path_len = strlen(dir_path);
-	int retval = -1;
-	unsigned int new_path_len;
-	struct l_list *ptr = doc_list;
+static struct l_list *search(const char *dir_path, const char *str, unsigned int ignore_case) {
+	const size_t dir_path_len = strlen(dir_path);
+	struct l_list *doc_list = NULL;
+	struct l_list *retval = NULL; 
+	struct l_list *ptr;
 	struct dirent *entry;
 	struct stat stbuf;
+	size_t new_path_len;
+	size_t obj_len;
 	char *new_path;
 	int status;
-	size_t obj_len;
 	DIR *dp;
  
-	if(!doc_list || !doc_list->obj)
- 		goto Out;
-
 	if(!(dp = opendir(dir_path))) 
 		goto Out;
 
@@ -176,7 +167,6 @@ static int search(struct l_list *doc_list, const char *dir_path,
 			status = strstr_i(entry->d_name, str);
 			if(status == -1)
 				goto CleanUp;
-
 			else if(status == 0)
 				continue;
 		}
@@ -193,6 +183,10 @@ static int search(struct l_list *doc_list, const char *dir_path,
 		if((stat(new_path, &stbuf)))
 			goto CleanUp;
 		
+		if(S_ISDIR(stbuf.stmode)) {
+			doc_list->next = search(new_path, str, ignore_case);
+		}
+
 		free(new_path);
 		new_path = NULL;
 
@@ -200,12 +194,22 @@ static int search(struct l_list *doc_list, const char *dir_path,
 			continue; 
 
 		obj_len = strlen(entry->d_name) + 1;
+		if(!doc_list) {
+			if(!(doc_list = alloc_l_list_obj(obj_len)))
+				goto Out;
+
+			snprintf(doc_list->obj, obj_len, "%s", entry->d_name);
+			ptr = doc_list;
+			continue;
+		}
+
 		ptr = ptr->next = alloc_l_list_obj(obj_len);
 		if(!ptr)
 			goto CleanUp;
 
 		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
 	}
+
 	if(errno) 
 		goto CleanUp;
 
@@ -232,19 +236,27 @@ static int search(struct l_list *doc_list, const char *dir_path,
 		goto Out;
 }
 
-static int search_recursively(struct l_list *doc_list, const char *dir_path, 
-							  const char *str, unsigned int ignore_case) {
-	const unsigned int dir_path_len = strlen(dir_path);
-	unsigned int new_path_len;
+/*static struct l_list *search_recursively(const char *dir_path, const char *str,
+										 unsigned int ignore_case) {
+	const size_t dir_path_len = strlen(dir_path); 
+	struct l_list *doc_list = NULL;
+	struct l_list *retval = NULL;
 	struct l_list *ptr;
 	struct dirent *entry;
 	struct stat stbuf;
-	int retval = -1;
-	int status;
-	char *new_path;
+	size_t new_path_len;
 	size_t obj_len;
+	char *new_path;
+	int status;
 	DIR *dp;
-}
+
+	if(!(dp = opendir(dir_path)))
+		goto Out;
+
+	while((entry = readdir(dp))) {
+
+	}
+}*/
 
 /*
 * Make a small letters copy of str.
@@ -301,13 +313,12 @@ static int strstr_i(const char *haystack, const char *needle) {
 */
 struct l_list *search_for_doc(const char *docs_dir_path, const char *str, 
 			   				  unsigned int ignore_case, unsigned int recursive) {
-
+	struct l_list *x;
 	if(recursive) {
-		;
+		
+	
 	}
-	else {
-		;
-	}
-
-	return search(docs_dir_path, str, ignore_case);
+		
+	else
+		return search(docs_dir_path, str, ignore_case);
 }
