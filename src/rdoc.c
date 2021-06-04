@@ -22,7 +22,6 @@
 /* Static Functions Prototype */
 static struct users_configs *input_configs();
 static struct l_list *alloc_l_list_obj(size_t);
-static struct l_list *search(const char *, const char *, unsigned int);
 static char *convert_to_lower(char *);
 static int strstr_i(const char *, const char *);
 static char *get_entry_path(const char *, const char *);
@@ -144,96 +143,6 @@ void free_l_list(struct l_list *ptr) {
 	}
 }
 
-static struct l_list *search(const char *dir_path, const char *str, unsigned int ignore_case) {
-	const size_t dir_path_len = strlen(dir_path);
-	struct l_list *doc_list = NULL;
-	struct l_list *retval = NULL; 
-	struct l_list *ptr;
-	struct dirent *entry;
-	struct stat stbuf;
-	size_t new_path_len;
-	size_t obj_len;
-	char *new_path;
-	int status;
-	DIR *dp;
- 
-	if(!(dp = opendir(dir_path))) 
-		goto Out;
-
-	while((entry = readdir(dp))) {
-		/* Skip current and pervious directory entries. */ 
-		if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
-			continue;
-		
-		if(ignore_case) {
-			status = strstr_i(entry->d_name, str);
-			if(status == -1)
-				goto CleanUp;
-			else if(status == 0)
-				continue;
-		}
-		else
-			if(!strstr(entry->d_name, str))
-				continue;
-
-		new_path_len = dir_path_len + strlen(entry->d_name) + 2;
-		if(!(new_path = (char *) malloc(new_path_len)))
-			goto CleanUp;
-
-		snprintf(new_path, new_path_len, "%s/%s", dir_path, entry->d_name);
-
-		if((stat(new_path, &stbuf)))
-			goto CleanUp;
-		
-		free(new_path);
-		new_path = NULL;
-
-		if(!S_ISREG(stbuf.st_mode))
-			continue; 
-
-		obj_len = strlen(entry->d_name) + 1;
-		if(!doc_list) {
-			if(!(doc_list = alloc_l_list_obj(obj_len)))
-				goto Out;
-
-			snprintf(doc_list->obj, obj_len, "%s", entry->d_name);
-			ptr = doc_list;
-			continue;
-		}
-
-		ptr = ptr->next = alloc_l_list_obj(obj_len);
-		if(!ptr)
-			goto CleanUp;
-
-		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
-	}
-
-	if(errno) 
-		goto CleanUp;
-
-	retval = doc_list;
-
-	Out:
-		if(dp)
-			if(closedir(dp))
-				// If cleanup haven't been already done jump to CleanUp and do it.
-				if(retval) {  
-					dp = NULL;
-					retval = NULL;
-					goto CleanUp;
-				}
-
-		return retval;
-
-	CleanUp:
-		if(new_path)
-			free(new_path);
-		if(doc_list)
-			free_l_list(doc_list);
-
-		goto Out;
-}
-
 /*
  * Make a small letters copy of str.
  */
@@ -329,8 +238,9 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 			if(S_ISDIR(stbuf.st_mode)) {	
 				if(!doc_list_rec_begin) {
                     if(!(doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive)))
-                        goto CleanUp;
-
+                       // goto CleanUp;
+                       ;
+					
                     ptr_rec = doc_list_rec_begin;
                 }
                 else {
@@ -338,9 +248,10 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
                     if(!ptr_rec)
 					    goto CleanUp;
                 }
-
+			
 			free(new_path);
-		    continue;
+		    new_path = NULL;
+			continue;
             }
         }
 		free(new_path);
@@ -360,12 +271,13 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 		else 
 			if(!strstr(entry->d_name, str))
 				continue;
-
+        
 		if(!doc_list_begin) {
 			if(!(doc_list_begin = alloc_l_list_obj(obj_len)))
 				goto CleanUp;
-
+			
 			snprintf(doc_list_begin->obj, obj_len, "%s", entry->d_name);
+			
 			ptr = doc_list_begin;	
 			continue;
 		}
@@ -404,7 +316,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 					retval = NULL;
 					goto CleanUp;
 				}
-
+		
 		return retval;
 
 	CleanUp:
@@ -417,3 +329,65 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 
 		goto Out;
 }
+
+void print_l_list(struct l_list *ptr) {
+	while(ptr) {
+		if(ptr->obj)
+			printf("%s\n", ptr->obj);
+
+		ptr = ptr->next;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

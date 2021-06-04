@@ -17,5 +17,6 @@ int generate_config(const char *);
 int read_configs(const char *, struct users_configs *);
 void free_l_list(struct l_list *);
 struct l_list *search_for_doc(const char *, const char *, unsigned int, unsigned int);
+void print_l_list(struct l_list *);
 
 #endif
