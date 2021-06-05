@@ -126,7 +126,7 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
  * existing documents in the documents directory. 
  */
 struct l_list *search_for_doc(const char *docs_dir_path, const char *str, 
-			   				  unsigned int ignore_case, unsigned int recursive) {
+                              unsigned int ignore_case, unsigned int recursive) {
 	struct l_list *doc_list_begin, *doc_list_rec_begin, *retval;
 	struct l_list *ptr, *ptr_rec;
 	struct dirent *entry;
