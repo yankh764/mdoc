@@ -1,4 +1,3 @@
-
 /*
 ---------------------------------------------------------
 | License: GPL-3.0                                      |
@@ -20,92 +19,11 @@
 
 
 /* Static Functions Prototype */
-static struct users_configs *input_configs();
 static struct l_list *alloc_l_list_obj(size_t);
 static char *convert_to_lower(char *);
 static int strstr_i(const char *, const char *);
 static char *get_entry_path(const char *, const char *);
 
-/*                                                                   
- * This function will ask the user 2 questions. The first one is the 
- * documents directory absolute path. Second is the pdf viewer's name.
- * Then it'll take the user's answers as an input.
- */
-static struct users_configs *input_configs() { 
-	struct users_configs *input; 
-
-	if(!(input = malloc(sizeof(struct users_configs))))
-		goto Error;
-
-	printf("Please enter your documents directory absolute path: ");
-	if(!(fgets(input->docs_dir_path, IN_LEN, stdin))) 
-		goto Error;
-
-	printf("\nPlease enter your pdf's viewer name: ");
-	if(!(fgets(input->pdf_viewer, IN_LEN, stdin)))
-		goto Error;
-
-	return input;
-
-	Error:
-		if(input)
-			free(input);
-		return NULL;
-}
-
-/*
- * The function will generate the configurations according to the 
- * user's answers.
- */
-int generate_config(const char *abs_config_path) {
-	struct users_configs *configs;
-	int retval = -1;
-	FILE *fp;
-
-	if(!(fp = fopen(abs_config_path, "w")))
-		goto Out;
-
-	if(!(configs = input_configs()))
-		goto Out;
-
-	fprintf(fp, "%s%s", configs->docs_dir_path, configs->pdf_viewer);
-	printf("\nYour configurations were generated succesfully.\n");
-
-	retval = 0;
-	
-	Out:
-		if(fp)
-			if(fclose(fp))
-				retval = -1;
-		if(configs)
-			free(configs); 
-
-		return retval;
-}
-
-
-int read_configs(const char *abs_config_path, struct users_configs *configs) {
-	FILE *fp;
-	int retval = -1;
-
-	if(!(fp = fopen(abs_config_path, "r"))) 
-		goto Out;
-
-	if(!fgets(configs->docs_dir_path, IN_LEN, fp)) 
-		goto Out;
-
-	if(!fgets(configs->pdf_viewer, IN_LEN, fp)) 
-		goto Out;
-
-	retval = 0;
-
-	Out:
-		if(fp)
-			if(fclose(fp))
-				retval = -1;
-
-		return retval;
-}
 
 /*
  * Return a pointer to allocated l_list structure that also 
@@ -237,9 +155,9 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 		if(recursive) {
 			if(S_ISDIR(stbuf.st_mode)) {	
 				if(!doc_list_rec_begin) {
-                    if(!(doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive)))
-                       // goto CleanUp;
-                       ;
+                    doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive);
+					if(errno)
+                       goto CleanUp;
 					
                     ptr_rec = doc_list_rec_begin;
                 }
@@ -338,56 +256,6 @@ void print_l_list(struct l_list *ptr) {
 		ptr = ptr->next;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
