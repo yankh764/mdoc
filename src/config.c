@@ -1,6 +1,6 @@
 /*
 ---------------------------------------------------------
-| License: GPL-3.0                                      |
+| License: GNU GPL-3.0                                  |
 ---------------------------------------------------------
 | This source file contains all the necessary functions |
 | for the config management of the rdoc program.        |
@@ -9,11 +9,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "informative.h"
 #include "config.h"
 
 
 /* Static Functions Prototype */
 static struct users_configs *input_configs();
+
 
 /*                                                                   
  * This function will ask the user 2 questions. The first one is the 
@@ -24,15 +26,15 @@ static struct users_configs *input_configs() {
     struct users_configs *retval = NULL;
     struct users_configs *input;
 
-	if(!(input = malloc(sizeof(struct users_configs))))
+	if(!(input = malloc_inf(sizeof(struct users_configs))))
 		goto Out;
 
 	printf("Please enter your documents directory absolute path: ");
-	if(!(fgets(input->docs_dir_path, IN_LEN, stdin))) 
+	if(!fgets_inf(input->docs_dir_path, IN_LEN, stdin)) 
 		goto Out;
 
 	printf("\nPlease enter your pdf's viewer name: ");
-	if(!(fgets(input->pdf_viewer, IN_LEN, stdin)))
+	if(!fgets_inf(input->pdf_viewer, IN_LEN, stdin))
 		goto Out;
 
     retval = input;
@@ -45,16 +47,17 @@ static struct users_configs *input_configs() {
         return retval; 
 }
 
+
 /*
  * The function will generate the configurations according to the 
  * user's answers.
  */
 int generate_config(const char *abs_config_path) {
-	struct users_configs *configs;
+	struct users_configs *configs = NULL;
 	int retval = -1;
 	FILE *fp;
 
-	if(!(fp = fopen(abs_config_path, "w")))
+	if(!(fp = fopen_inf(abs_config_path, "w")))
 		goto Out;
 
 	if(!(configs = input_configs()))
@@ -67,7 +70,7 @@ int generate_config(const char *abs_config_path) {
 	
 	Out:
 		if(fp)
-			if(fclose(fp))
+			if(fclose_inf(fp))
 				retval = -1;
 		if(configs)
 			free(configs); 
@@ -78,30 +81,30 @@ int generate_config(const char *abs_config_path) {
 
 struct users_configs *read_configs(const char *abs_config_path) {
 	struct users_configs *retval = NULL;
-	struct users_configs *configs;
+	struct users_configs *configs = NULL;
 	FILE *fp;
-
-	if(!(fp = fopen(abs_config_path, "r"))) 
+	
+	if(!(fp = fopen_inf(abs_config_path, "r"))) 
+		goto Out;
+	
+	if(!(configs = malloc_inf(sizeof(struct users_configs))))
 		goto Out;
 
-	if(!(configs = malloc(sizeof(struct users_configs))))
+	if(!fgets_inf(configs->docs_dir_path, IN_LEN, fp)) 
 		goto Out;
 
-	if(!fgets(configs->docs_dir_path, IN_LEN, fp)) 
-		goto Out;
-
-	if(!fgets(configs->pdf_viewer, IN_LEN, fp)) 
+	if(!fgets_inf(configs->pdf_viewer, IN_LEN, fp)) 
 		goto Out;
 
 	retval = configs;
 
 	Out:
 		if(fp)
-			if(fclose(fp))
+			if(fclose_inf(fp))
 				retval = NULL;
 		/* If some error occured */
 		if(!retval)
-			if(configs)
+			if(configs) 
 				free(configs);
 
 		return retval;

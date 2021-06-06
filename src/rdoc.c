@@ -1,6 +1,6 @@
 /*
 ---------------------------------------------------------
-| License: GPL-3.0                                      |
+| License: GNU GPL-3.0                                  |
 ---------------------------------------------------------
 | This source file contains all the necessary functions |
 | for the rdoc program.                                 |
@@ -14,9 +14,12 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <sys/types.h>
+#include "informative.h"
 #include "rdoc.h"
 
+
+/* Give the right program name for the error messages */
+const char *_prog_name_inf_ = "rdoc";
 
 /* Static Functions Prototype */
 static struct l_list *alloc_l_list_obj(size_t);
@@ -32,20 +35,21 @@ static char *get_entry_path(const char *, const char *);
 static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *ptr;
 
-	if(!(ptr = malloc(sizeof(struct l_list))))
+	if(!(ptr = malloc_inf(sizeof(struct l_list))))
 		goto Error;
 	
-	if(!(ptr->obj = (char *) malloc(obj_size)))
+	if(!(ptr->obj = (char *) malloc_inf(obj_size)))
 		goto Error;
 
 	return ptr;
 
-	Error:
+	Error:	
 		if(ptr)
 			free(ptr);
-
+	
 		return NULL;
 }
+
 
 void free_l_list(struct l_list *ptr) {
 	struct l_list *prev_ptr;
@@ -61,6 +65,7 @@ void free_l_list(struct l_list *ptr) {
 	}
 }
 
+
 /*
  * Make a small letters copy of str.
  */
@@ -69,7 +74,7 @@ static char *convert_to_lower(char *str) {
 	unsigned int i;
 	char *str_c; // Copy of str
 
-	if((str_c = (char *) malloc(len))) {
+	if((str_c = (char *) malloc_inf(len))) {
 		for(i=0; str[i]!='\0'; i++) {
 			if(isupper(str[i]))
 				str_c[i] = tolower(str[i]);
@@ -87,8 +92,9 @@ static char *convert_to_lower(char *str) {
  * and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
  */
 static int strstr_i(const char *haystack, const char *needle) {
+	char *haystack_l = NULL; 
+	char *needle_l = NULL; 
 	int retval = -1;
-	char *haystack_l, *needle_l; 
 	
 	if(!(haystack_l = convert_to_lower((char *) haystack)))
 		goto Out;
@@ -114,8 +120,7 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
     const size_t path_len = strlen(dir_path) + strlen(entry_name) + 2;
     char *entry_path;
 
-    entry_path = (char *) malloc(path_len);
-    if(entry_path)
+    if((entry_path = (char *) malloc_inf(path_len)))
         snprintf(entry_path, path_len, "%s/%s", dir_path, entry_name);
 
     return entry_path;
@@ -137,10 +142,10 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 	DIR *dp;
      
 	doc_list_begin = doc_list_rec_begin = retval = NULL;
-    if(!(dp = opendir(docs_dir_path))) 
+    if(!(dp = opendir_inf(docs_dir_path))) 
 		goto Out;
 
-	while((entry = readdir(dp))) {
+	while((entry = readdir_inf(dp))) {
 		/* Skip current and pervious directory entries. */ 
 		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
 			continue;
@@ -148,7 +153,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 		if(!(new_path = get_entry_path(docs_dir_path, entry->d_name))) 
 			goto CleanUp;
 
-		if(stat(new_path, &stbuf))
+		if(stat_inf(new_path, &stbuf))
 			goto CleanUp;
 		
 		obj_len = strlen(entry->d_name) + 1;
@@ -164,7 +169,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
                 else {
                     ptr_rec = ptr_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
                     if(!ptr_rec)
-					    goto CleanUp;
+						goto CleanUp;
                 }
 			
 			free(new_path);
@@ -227,7 +232,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 
 	Out:
 		if(dp)
-			if(closedir(dp))
+			if(closedir_inf(dp))
 				// If cleanup haven't been already done jump to CleanUp and do it.
 				if(retval) {  
 					dp = NULL;
@@ -256,6 +261,3 @@ void print_l_list(struct l_list *ptr) {
 		ptr = ptr->next;
 	}
 }
-
-
-
