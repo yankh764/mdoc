@@ -87,6 +87,7 @@ static char *convert_to_lower(char *str) {
 	return str_c;
 }
 
+
 /*
  * The same as strstr() but with ignored case distinction
  * and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
@@ -158,7 +159,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 		
 		obj_len = strlen(entry->d_name) + 1;
 		if(recursive) {
-			if(S_ISDIR(stbuf.st_mode)) {	
+			if(S_ISDIR(stbuf.st_mode)) {
 				if(!doc_list_rec_begin) {
                     doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive);
 					if(errno)
@@ -168,7 +169,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
                 }
                 else {
                     ptr_rec = ptr_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
-                    if(!ptr_rec)
+                    if(errno)
 						goto CleanUp;
                 }
 			
@@ -182,14 +183,14 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 
 		if(!S_ISREG(stbuf.st_mode))
 			continue; 
-		
+	
 		if(ignore_case) {
 			status = strstr_i(entry->d_name, str);	
 			
 			if(status == -1)
 				goto CleanUp;
 			else if(status == 0)
-				continue;
+				continue;		
 		}
 		else 
 			if(!strstr(entry->d_name, str))
@@ -211,7 +212,6 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 
 		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
 	}
-
 	if(errno) 
 		goto CleanUp;
 
@@ -226,11 +226,9 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 	else if(doc_list_rec_begin)
 		retval = doc_list_rec_begin;
 	
-	else 
-		goto CleanUp;
-
 
 	Out:
+		puts("out");
 		if(dp)
 			if(closedir_inf(dp))
 				// If cleanup haven't been already done jump to CleanUp and do it.
