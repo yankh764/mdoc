@@ -63,8 +63,7 @@ void free_l_list(struct l_list *ptr) {
 			free(ptr->obj);
 		
 		prev_ptr = ptr;
-		ptr = ptr->next;
-		
+		ptr = ptr->next;	
 		free(prev_ptr);
 	}
 }
@@ -135,9 +134,7 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
 
 void print_l_list(struct l_list *ptr) {
 	while(ptr) {
-		if(ptr->obj)
-			printf("%s\n", ptr->obj);
-
+		printf("%s\n", ptr->obj);
 		ptr = ptr->next;
 	}
 }
@@ -183,21 +180,18 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 		
 		if(S_ISDIR(stbuf.st_mode) && recursive) {
 			if(!doc_list_rec_begin) {
-				doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive);
-				current_node_rec = doc_list_rec_begin;
+				if((doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive)))
+					current_node_rec = doc_list_rec_begin;
 			}	
 			else
 				current_node_rec = current_node_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
 			
 			if(errno || prev_error)
 				goto CleanUp;
-
-			/* Terminate the next node in case the current one is the last */
-			current_node_rec->next = NULL;
 		}
 
 		free(new_path);
-		new_path = NULL; /* Mark it as already freed */
+		new_path = NULL; /* Mark it as already free */
 
 		if(!S_ISREG(stbuf.st_mode))
 			continue;
@@ -219,12 +213,13 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			
 			current_node = doc_list_begin;
 		}
-		else 
+		else { 
 			if(!(current_node = current_node->next = alloc_l_list_obj(len)))
 				goto CleanUp;
+		}
 
 		snprintf(current_node->obj, len, "%s", entry->d_name);
-		/* Terminate the next node in case the current one is the last */
+		/* Mark the next node as empty in case the current one is the last */
         current_node->next = NULL;
 	}
 	if(errno)
