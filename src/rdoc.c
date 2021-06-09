@@ -166,7 +166,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 		goto Out;
 
 	while((entry = readdir_inf(dp))) {
-		/* Skip current and pervious directory entries. */
+		/* Skip current and pervious directory entries */
 		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
 			continue;
 
