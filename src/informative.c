@@ -26,7 +26,7 @@ void *malloc_inf(size_t size) {
 
 	if(!(ptr = malloc(size)))
 		fprintf(stderr, "%s: can't allocate memory: %s\n", 
-				_prog_name_inf_, strerror(errno));
+				prog_name_inf, strerror(errno));
 
 	return ptr;
 }
@@ -36,7 +36,7 @@ char *fgets_inf(char *str, int size, FILE *stream) {
 	char *retval;
 
 	if(!(retval = fgets(str, size, stream)))
-		fprintf(stderr, "%s: can't read input\n", _prog_name_inf_);
+		fprintf(stderr, "%s: can't read input\n", prog_name_inf);
 
 	return retval;
 }
@@ -47,7 +47,7 @@ FILE *fopen_inf(const char *pathname, const char *mode) {
 
 	if(!(fp = fopen(pathname, mode)))
 		fprintf(stderr, "%s: can't open '%s': %s\n", 
-				_prog_name_inf_, pathname, strerror(errno));
+				prog_name_inf, pathname, strerror(errno));
 	
 	return fp;
 }
@@ -58,7 +58,7 @@ int fclose_inf(FILE *fp) {
 
 	if((retval = fclose(fp)))
 		fprintf(stderr, "%s: can't close file: %s\n", 
-				_prog_name_inf_, strerror(errno));
+				prog_name_inf, strerror(errno));
 
 	return retval;
 }
@@ -69,7 +69,7 @@ DIR *opendir_inf(const char *path) {
 
 	if(!(dp = opendir(path)))
 		fprintf(stderr, "%s: can't open '%s': %s\n", 
-				_prog_name_inf_, path, strerror(errno));
+				prog_name_inf, path, strerror(errno));
 
 	return dp;
 }
@@ -80,7 +80,7 @@ int closedir_inf(DIR *dp) {
 
 	if((retval = closedir(dp)))
 		fprintf(stderr, "%s: can't close directory: %s\n", 
-				_prog_name_inf_, strerror(errno));
+				prog_name_inf, strerror(errno));
 
 	return retval;
 }
@@ -91,7 +91,7 @@ int stat_inf(const char *pathname, struct stat *statbuf) {
 
 	if((retval = stat(pathname, statbuf)))
 		fprintf(stderr, "%s: can't get info on '%s': %s\n", 
-				_prog_name_inf_, pathname, strerror(errno));
+				prog_name_inf, pathname, strerror(errno));
 
 	return retval;
 }
@@ -102,7 +102,7 @@ struct dirent *readdir_inf(DIR *dp) {
 
 	if(!(entry = readdir(dp)) && errno)
 		fprintf(stderr, "%s: can't read file's entry: %s\n", 
-				_prog_name_inf_, strerror(errno));
+				prog_name_inf, strerror(errno));
 
 	return entry;
 }

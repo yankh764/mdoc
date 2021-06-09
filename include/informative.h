@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-extern const char *_prog_name_inf_; 
+extern const char *prog_name_inf; 
 
 void *malloc_inf(size_t);
 char *fgets_inf(char *, int, FILE *);

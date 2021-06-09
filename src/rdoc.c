@@ -19,7 +19,11 @@
 
 
 /* Give the right program name for the error messages */
-const char *_prog_name_inf_ = "rdoc";
+const char *prog_name_inf = "rdoc";
+
+/* To indicate if a previous error eccoured in a functions
+   that could overwrite errno with 0 (success) before returning */
+bool prev_error;
 
 /* Static Functions Prototype */
 static struct l_list *alloc_l_list_obj(size_t);
@@ -117,6 +121,7 @@ static int strstr_i(const char *haystack, const char *needle) {
 		return retval;
 }
 
+
 static char *get_entry_path(const char *dir_path, const char *entry_name) {
     const size_t path_len = strlen(dir_path) + strlen(entry_name) + 2;
     char *entry_path;
@@ -127,117 +132,124 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
     return entry_path;
 }
 
+
+void print_l_list(struct l_list *ptr) {
+	while(ptr) {
+		if(ptr->obj)
+			printf("%s\n", ptr->obj);
+
+		ptr = ptr->next;
+	}
+}
+
+
 /*
  * The function will search the passed str sequence in all the 
  * existing documents in the documents directory. 
  */
-struct l_list *search_for_doc(const char *docs_dir_path, const char *str, 
-                              unsigned int ignore_case, unsigned int recursive) {
+struct l_list *search_for_doc(const char *dir_path, const char *str, 
+                              bool ignore_case, bool recursive) {
+	/* Note: I tried to find better variables names for doc_list_begin and 
+      doc_list_rec_begin, but didn't find any. So just to make things clear
+      doc_list_begin refers to the beginning of the documents list that is
+      filled by the function, whereas doc_list_rec_begin refers to the begnning
+      of the documents list that is created, filled and returned by the recursion. */
 	struct l_list *doc_list_begin, *doc_list_rec_begin, *retval;
-	struct l_list *ptr, *ptr_rec;
+	struct l_list *current_node, *current_node_rec;
 	struct dirent *entry;
 	struct stat stbuf;
-	size_t obj_len;
 	char *new_path;
-	int status;
+	size_t len;
+	int ret;
 	DIR *dp;
-     
+	
 	doc_list_begin = doc_list_rec_begin = retval = NULL;
-    if(!(dp = opendir_inf(docs_dir_path))) 
+
+	if(!(dp = opendir_inf(dir_path)))
 		goto Out;
 
 	while((entry = readdir_inf(dp))) {
-		/* Skip current and pervious directory entries. */ 
+		/* Skip current and pervious directory entries. */
 		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
 			continue;
-		
-		if(!(new_path = get_entry_path(docs_dir_path, entry->d_name))) 
+
+		if(!(new_path = get_entry_path(dir_path, entry->d_name)))
 			goto CleanUp;
 
 		if(stat_inf(new_path, &stbuf))
 			goto CleanUp;
+
+		len = strlen(entry->d_name) + 1;
 		
-		obj_len = strlen(entry->d_name) + 1;
-		if(recursive) {
-			if(S_ISDIR(stbuf.st_mode)) {
-				if(!doc_list_rec_begin) {
-                    doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive);
-					if(errno)
-                       goto CleanUp;
-					
-                    ptr_rec = doc_list_rec_begin;
-                }
-                else {
-                    ptr_rec = ptr_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
-                    if(errno)
-						goto CleanUp;
-                }
+		if(S_ISDIR(stbuf.st_mode) && recursive) {
+			if(!doc_list_rec_begin) {
+				doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive);
+				current_node_rec = doc_list_rec_begin;
+			}	
+			else
+				current_node_rec = current_node_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
 			
-			free(new_path);
-		    new_path = NULL;
-			continue;
-            }
-        }
+			if(errno || prev_error)
+				goto CleanUp;
+
+			/* Terminate the next node in case the current one is the last */
+			current_node_rec->next = NULL;
+		}
+
 		free(new_path);
-		new_path = NULL;
+		new_path = NULL; /* Mark it as already freed */
 
 		if(!S_ISREG(stbuf.st_mode))
-			continue; 
-	
+			continue;
+
 		if(ignore_case) {
-			status = strstr_i(entry->d_name, str);	
-			
-			if(status == -1)
+			if((ret = strstr_i(entry->d_name, str)) == -1)
 				goto CleanUp;
-			else if(status == 0)
-				continue;		
+
+			else if(ret == 0)
+				continue;
 		}
 		else 
 			if(!strstr(entry->d_name, str))
 				continue;
-        
+
 		if(!doc_list_begin) {
-			if(!(doc_list_begin = alloc_l_list_obj(obj_len)))
+			if(!(doc_list_begin = alloc_l_list_obj(len)))
 				goto CleanUp;
 			
-			snprintf(doc_list_begin->obj, obj_len, "%s", entry->d_name);
-			
-			ptr = doc_list_begin;	
-			continue;
+			current_node = doc_list_begin;
 		}
+		else 
+			if(!(current_node = current_node->next = alloc_l_list_obj(len)))
+				goto CleanUp;
 
-		ptr = ptr->next = alloc_l_list_obj(obj_len);
-		if(!ptr)
-			goto CleanUp;
-
-		snprintf(ptr->obj, obj_len, "%s", entry->d_name);
+		snprintf(current_node->obj, len, "%s", entry->d_name);
+		/* Terminate the next node in case the current one is the last */
+        current_node->next = NULL;
 	}
-	if(errno) 
+	if(errno)
 		goto CleanUp;
 
 	/* Determine the right retval */
 	if(doc_list_begin) {
 		if(doc_list_rec_begin)
-			ptr->next = doc_list_rec_begin;
+			current_node->next = doc_list_rec_begin;
 		
 		retval = doc_list_begin;
-	} 
-	
+	}
 	else if(doc_list_rec_begin)
 		retval = doc_list_rec_begin;
-	
 
 	Out:
-		puts("out");
 		if(dp)
 			if(closedir_inf(dp))
-				// If cleanup haven't been already done jump to CleanUp and do it.
-				if(retval) {  
+				/* If cleanup haven't been already done */
+				if(retval) {
 					dp = NULL;
 					retval = NULL;
 					goto CleanUp;
 				}
-		
+
 		return retval;
 
 	CleanUp:
@@ -247,15 +259,7 @@ struct l_list *search_for_doc(const char *docs_dir_path, const char *str,
 			free_l_list(doc_list_begin);
 		if(doc_list_rec_begin)
 			free_l_list(doc_list_rec_begin);
-
+		
+		prev_error = true;
 		goto Out;
-}
-
-void print_l_list(struct l_list *ptr) {
-	while(ptr) {
-		if(ptr->obj)
-			printf("%s\n", ptr->obj);
-
-		ptr = ptr->next;
-	}
 }
