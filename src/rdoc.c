@@ -184,8 +184,9 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 					current_node_rec = doc_list_rec_begin;
 			}	
 			else
-				current_node_rec = current_node_rec->next = search_for_doc(new_path, str, ignore_case, recursive);
-			
+				if((current_node_rec->next = search_for_doc(new_path, str, ignore_case, recursive)))
+					current_node_rec = current_node_rec->next;
+		
 			if(errno || prev_error)
 				goto CleanUp;
 		}
