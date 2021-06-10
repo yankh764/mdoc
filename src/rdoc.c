@@ -27,6 +27,7 @@ static struct l_list *alloc_l_list_obj(size_t);
 static char *convert_to_lower(char *);
 static int strstr_i(const char *, const char *);
 static char *get_entry_path(const char *, const char *);
+static struct l_list *get_last_node(struct l_list *);
 
 
 /*
@@ -137,6 +138,18 @@ void print_l_list(struct l_list *ptr) {
 }
 
 
+static struct l_list *get_last_node(struct l_list *ptr) {
+	struct l_list *prev = NULL;
+
+	while(ptr) {
+		prev = ptr;
+		ptr = ptr->next;
+	}
+
+	return prev;
+}
+
+
 /*
  * The function will search the passed str sequence in all the 
  * existing documents in the documents directory. 
@@ -178,11 +191,11 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 		if(S_ISDIR(stbuf.st_mode) && recursive) {
 			if(!doc_list_rec_begin) {
 				if((doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive)))
-					current_node_rec = doc_list_rec_begin;
+					current_node_rec = get_last_node(doc_list_rec_begin);
 			}	
 			else
 				if((current_node_rec->next = search_for_doc(new_path, str, ignore_case, recursive)))
-					current_node_rec = current_node_rec->next;
+					current_node_rec = get_last_node(current_node_rec->next);
 		
 			if(errno || prev_error)
 				goto CleanUp;
