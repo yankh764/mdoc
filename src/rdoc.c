@@ -18,10 +18,7 @@
 #include "rdoc.h"
 
 
-/* Give the right program name for the error messages */
-const char *prog_name_inf = "rdoc";
-
-/* To indicate if a previous error eccoured in a functions
+/* To indicate if a previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
 bool prev_error;
 
@@ -214,11 +211,10 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			
 			current_node = doc_list_begin;
 		}
-		else { 
+		else
 			if(!(current_node = current_node->next = alloc_l_list_obj(len)))
 				goto CleanUp;
-		}
-
+		
 		snprintf(current_node->obj, len, "%s", entry->d_name);
 		/* Mark the next node as empty in case the current one is the last */
         current_node->next = NULL;
