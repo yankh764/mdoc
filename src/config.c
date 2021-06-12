@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "informative.h"
+#include "input.h"
 #include "config.h"
 
 
@@ -28,13 +29,15 @@ static struct users_configs *input_configs() {
 
 	if(!(input = malloc_inf(sizeof(struct users_configs))))
 		goto Out;
-
+	
+	input->docs_dir_path = input->pdf_viewer = NULL;
+	
 	printf("Please enter your documents directory absolute path: ");
-	if(!fgets_inf(input->docs_dir_path, IN_LEN, stdin)) 
+	if(!(input->docs_dir_path = get_line())) 
 		goto Out;
 
 	printf("\nPlease enter your pdf's viewer name: ");
-	if(!fgets_inf(input->pdf_viewer, IN_LEN, stdin))
+	if(!(input->pdf_viewer = get_line()))
 		goto Out;
 
     retval = input;
@@ -42,7 +45,7 @@ static struct users_configs *input_configs() {
     Out:
         if(!retval)
             if(input)
-                free(input);
+				free_users_configs(input);
         
         return retval; 
 }
@@ -63,7 +66,7 @@ int generate_config(const char *abs_config_path) {
 	if(!(configs = input_configs()))
 		goto Out;
 
-	fprintf(fp, "%s%s", configs->docs_dir_path, configs->pdf_viewer);
+	fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
 	printf("\nYour configurations were generated succesfully.\n");
 
 	retval = 0;
@@ -72,9 +75,10 @@ int generate_config(const char *abs_config_path) {
 		if(fp)
 			if(fclose_inf(fp))
 				retval = -1;
+		
 		if(configs)
-			free(configs); 
-
+			free_users_configs(configs); 
+		
 		return retval;
 }
 
@@ -89,11 +93,13 @@ struct users_configs *read_configs(const char *abs_config_path) {
 	
 	if(!(configs = malloc_inf(sizeof(struct users_configs))))
 		goto Out;
-
-	if(!fgets_inf(configs->docs_dir_path, IN_LEN, fp)) 
+	
+	configs->docs_dir_path = configs->pdf_viewer = NULL;
+	
+	if(!(configs->docs_dir_path = fget_line(fp))) 
 		goto Out;
 
-	if(!fgets_inf(configs->pdf_viewer, IN_LEN, fp)) 
+	if(!(configs->pdf_viewer = fget_line(fp))) 
 		goto Out;
 
 	retval = configs;
@@ -102,10 +108,21 @@ struct users_configs *read_configs(const char *abs_config_path) {
 		if(fp)
 			if(fclose_inf(fp))
 				retval = NULL;
-		/* If some error occured */
+		
 		if(!retval)
 			if(configs) 
-				free(configs);
+				free_users_configs(configs);
 
 		return retval;
 }
+
+
+void free_users_configs(struct users_configs *ptr) {
+	if(ptr->pdf_viewer)
+		free(ptr->pdf_viewer);
+	if(ptr->docs_dir_path)
+		free(ptr->docs_dir_path);
+
+	free(ptr);
+}
+

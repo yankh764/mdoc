@@ -12,13 +12,15 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
 #include "informative.h"
+#include "input.h"
 #include "rdoc.h"
 
+#define ANSI_COLOR_RED   "\e[0;31m"
+#define ANSI_COLOR_RESET "\e[0m"
 
-/* To indicate if a previous error occoured in a functions
+
+/* To indicate if an previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
 bool prev_error;
 
@@ -62,6 +64,7 @@ void free_l_list(struct l_list *ptr) {
 		
 		prev_ptr = ptr;
 		ptr = ptr->next;	
+		
 		free(prev_ptr);
 	}
 }
@@ -127,14 +130,6 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
         snprintf(entry_path, path_len, "%s/%s", dir_path, entry_name);
 
     return entry_path;
-}
-
-
-void print_l_list(struct l_list *ptr) {
-	while(ptr) {
-		printf("%s\n", ptr->obj);
-		ptr = ptr->next;
-	}
 }
 
 
@@ -265,6 +260,45 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 		if(doc_list_rec_begin)
 			free_l_list(doc_list_rec_begin);
 		
-		prev_error = true;
+		prev_error = 1; /* errno can be overwritten from closedir_inf() */
 		goto Out;
 }
+
+
+void display_docs(struct l_list *ptr, bool color_status) {
+	if(ptr) {
+		printf("These are the documents that were found:\n\n");
+
+		while(ptr) {
+			if(color_status)
+				printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
+			else
+				printf("<*> %s\n", ptr->obj);
+			
+			ptr = ptr->next;	
+		}
+	}
+	else
+		printf("No documents were found\n");
+}
+
+
+unsigned int count_l_list_nodes(struct l_list *ptr) {
+	unsigned int i;
+
+	for(i=0; ptr!=NULL; i++)
+		ptr = ptr->next;
+
+	return i;
+}
+
+
+const char *get_doc_name() {
+	;
+}
+
+
+int open_doc(const char *pdf_viewer, const char *doc_path) {
+	;
+}
+

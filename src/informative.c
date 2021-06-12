@@ -12,12 +12,11 @@
 --------------------------------------------------------------
 */
 
-#include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "informative.h"
 
 
@@ -105,4 +104,48 @@ struct dirent *readdir_inf(DIR *dp) {
 				prog_name_inf, strerror(errno));
 
 	return entry;
+}
+
+
+pid_t fork_inf(void) {
+	pid_t retval;
+	
+	if((retval = fork()) == -1)
+		fprintf(stderr, "%s: can't fork new process: %s\n", 
+				prog_name_inf, strerror(errno));
+
+	return retval;
+}
+
+
+pid_t waitpid_inf(pid_t pid, int *wstatus, int options) {
+	pid_t retval; 
+
+	if((retval = waitpid(pid, wstatus, options)) == -1)
+		fprintf(stderr, "%s: can't wait for state in the new child process: %s\n", 
+				prog_name_inf, strerror(errno));
+
+	return retval;
+}
+
+
+int execv_inf(const char *pathname, char *const *argv) {
+	int retval = 0;
+
+	if((retval = execv(pathname, argv)))
+		fprintf(stderr, "%s: can't execute '%s': %s\n", 
+				prog_name_inf, pathname, strerror(errno));
+
+	return retval;
+}
+
+
+void *realloc_inf(void *ptr, size_t size) {
+	void *retval;
+
+	if(!(retval = realloc(ptr, size)))
+		fprintf(stderr, "%s: can't allocate memory: %s\n", 
+				prog_name_inf, strerror(errno));
+
+	return retval;
 }

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-/* To indicate if a previous error eccoured in a functions
+/* To indicate if an previous error eccoured in a functions
    that could overwrite errno with 0 (success) before returning */
 extern bool prev_error; 
 
@@ -14,6 +14,9 @@ struct l_list {
 
 void free_l_list(struct l_list *);
 struct l_list *search_for_doc(const char *, const char *, bool, bool);
-void print_l_list(struct l_list *);
+void display_docs(struct l_list *, bool);
+unsigned int count_l_list_nodes(struct l_list *);
+int open_doc(const char *, const char *);
+const char *get_doc_name();
 
 #endif
