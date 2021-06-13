@@ -21,7 +21,7 @@ char *get_line() {
 	unsigned int i;
 	int c;
 
-	for(i=0; (c = getchar())!=EOF; i++) {
+	for(i=0; (c = getchar()); i++) {
 		if(c == EOF)
 			goto Out;
 		else if(c == '\n')
@@ -61,7 +61,7 @@ char *fget_line(FILE *stream) {
 	unsigned int i;
 	int c;
 
-	for(i=0; (c = getc(stream)); i++) {
+	for(i=0; (c = getc(stream)) != EOF; i++) {
 		if(c == '\n')
 			break;
 		

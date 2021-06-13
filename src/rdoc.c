@@ -37,21 +37,17 @@ static struct l_list *get_last_node(struct l_list *);
  * has an allocated obj to it with the size of obj_size.
  */
 static struct l_list *alloc_l_list_obj(size_t obj_size) {
+	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
-	if(!(ptr = malloc_inf(sizeof(struct l_list))))
-		goto Error;
-	
-	if(!(ptr->obj = (char *) malloc_inf(obj_size)))
-		goto Error;
+	if((ptr = malloc_inf(sizeof(struct l_list))))
+		if((ptr->obj = (char *) malloc_inf(obj_size)))
+			retval = ptr;
 
-	return ptr;
+	if(!retval && ptr)
+		free(ptr);
 
-	Error:	
-		if(ptr)
-			free(ptr);
-	
-		return NULL;
+	return retval;
 }
 
 
@@ -279,7 +275,7 @@ void display_docs(struct l_list *ptr, bool color_status) {
 		}
 	}
 	else
-		printf("No documents were found\n");
+		printf("No documents were found!\n");
 }
 
 
@@ -293,8 +289,53 @@ unsigned int count_l_list_nodes(struct l_list *ptr) {
 }
 
 
-const char *get_doc_name() {
-	;
+char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursive) {
+	char *retval = NULL;
+	char *new_path = NULL;
+	struct dirent *entry;
+	struct stat stbuf;
+	size_t len;
+	DIR *dp;
+
+	if(!(dp = opendir_inf(dir_path)))
+		goto Out;
+
+	while((entry = readdir_inf(dp))) {
+		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			continue;
+
+		if(!(new_path = get_entry_path(dir_path, entry->d_name)))
+			break;
+
+		if(stat_inf(new_path, &stbuf))
+			break;
+
+		if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
+			break;
+		
+		free(new_path);
+		new_path = NULL;
+	}
+
+	if(errno) {
+		/* Indicate that an error occured using prev_error in case, 
+		   errno was overwritten by success when closing dp.        */
+		prev_error = true;
+		goto Out;
+	}
+	
+	retval = new_path;
+
+	Out:
+		if(dp)
+			if(closedir_inf(dp))
+				retval = NULL;
+
+		if(!retval)
+			if(new_path)
+				free(new_path);
+
+		return retval;
 }
 
 
