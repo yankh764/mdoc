@@ -16,31 +16,42 @@
  * Get a line of input from stdin without limiting it's size.
  */
 char *get_line() {
-	char *retval = NULL;
-	char *line = NULL;
+	char *retval, *line, *line_addr;
 	unsigned int i;
 	int c;
+
+	retval = line_addr = NULL;
 
 	for(i=0; (c = getchar()); i++) {
 		if(c == EOF)
 			goto Out;
+
 		else if(c == '\n')
 			break;
 		
 		if(!(line = (char *) realloc_inf(line, i+1)))
 			goto Out;
-
+		
+		/* Save the address of line in case realloc_inf() overwrote it with NULL, 
+		   so cleanup can be done.                                               */
+		if(!line_addr)
+			line_addr = line;
+		
 		line[i] = c;
-	}
-	/* If line wasn't allocated and first input char was '\n' */
-	if(!line) 
-		goto Out;
-
-	if(!(line = (char *) realloc_inf(line, i+1)))
-		goto Out;
+	}	
 	
-	line[i] = '\0';
-	retval = line;
+	if(line) {
+		if(!(line = (char *) realloc_inf(line, i+1)))
+			goto Out;
+		
+		line[i] = '\0';
+		retval = line;
+	}
+	else 
+		if(line_addr)
+			free(line_addr);
+
+	return retval;
 	
 	Out:
 		if(!retval)
