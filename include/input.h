@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-char *get_line();
-char *fget_line(FILE *);
+char *get_line(FILE *);
 
 #endif

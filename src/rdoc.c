@@ -40,10 +40,9 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
-	if((ptr = malloc_inf(sizeof(struct l_list)))
-	                     && 
-	   (ptr->obj = (char *) malloc_inf(obj_size)))
-			retval = ptr;
+	if((ptr = malloc_inf(sizeof(struct l_list))) &&
+			(ptr->obj = (char *) malloc_inf(obj_size)))
+		retval = ptr;
 
 	if(!retval && ptr)
 		free(ptr);
@@ -98,24 +97,20 @@ static int strstr_i(const char *haystack, const char *needle) {
 	char *needle_l = NULL; 
 	int retval = -1;
 	
-	if(!(haystack_l = small_let_copy(haystack)))
-		goto Out;
+	if((haystack_l = small_let_copy(haystack)) &&
+			(needle_l = small_let_copy(needle))) {
+		if(strstr(haystack_l, needle_l))
+			retval = 1;
+		else 
+			retval = 0; 
+	}
 
-	if(!(needle_l = small_let_copy(needle)))
-		goto Out;
-	
-	if(strstr(haystack_l, needle_l))
-		retval = 1;
-	else 
-		retval = 0;
+	if(haystack_l)
+		free(haystack_l);	
+	if(needle_l)
+		free(needle_l);
 
-	Out:
-		if(haystack_l)
-			free(haystack_l);	
-		if(needle_l)
-			free(needle_l);
-
-		return retval;
+	return retval;
 }
 
 
@@ -197,7 +192,6 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 				if(ignore_case) {
 					if((ret = strstr_i(entry->d_name, str)) == -1)
 						goto Error;
-	
 					else if(ret == 0)
 						continue;
 				}
@@ -236,14 +230,20 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	else if(doc_list_rec_begin)
 		retval = doc_list_rec_begin;
 
-	if(!closedir_inf(dp))
-		return retval;
-	
-	dp = NULL;
-
-	Error:
+	Out:
 		if(dp)
-			closedir_inf(dp);
+			if(closedir_inf(dp)) 
+			/* If cleanup haven't been done already */
+				if(retval) {
+					dp = NULL;
+					retval = NULL;
+					goto Error;
+				}
+		
+		return retval;
+
+	
+	Error:
 		if(new_path)
 			free(new_path);
 		if(doc_list_begin)
@@ -252,8 +252,8 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			free_l_list(doc_list_rec_begin);
 
 		prev_error = true; /* errno could have been overwritten from closedir_inf() */
-		
-		return NULL;
+
+		goto Out;
 }
 
 
@@ -270,8 +270,6 @@ void display_docs(struct l_list *ptr, bool color_status) {
 			ptr = ptr->next;	
 		}
 	}
-	else
-		printf("No documents were found!\n");
 }
 
 
@@ -290,48 +288,42 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 	char *new_path = NULL;
 	struct dirent *entry;
 	struct stat stbuf;
-	size_t len;
 	DIR *dp;
 
-	if(!(dp = opendir_inf(dir_path)))
-		goto Out;
+	if((dp = opendir_inf(dir_path)))
+		while((entry = readdir_inf(dp))) {
+			if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+				continue;
 
-	while((entry = readdir_inf(dp))) {
-		if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-			continue;
+			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
+				break;
 
-		if(!(new_path = get_entry_path(dir_path, entry->d_name)))
-			break;
+			if(stat_inf(new_path, &stbuf))
+				break;
 
-		if(stat_inf(new_path, &stbuf))
-			break;
+			if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
+				break;
+			
+			free(new_path);
+			new_path = NULL;
+		}
 
-		if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
-			break;
-		
-		free(new_path);
-		new_path = NULL;
-	}
-
-	if(errno) {
+	if(errno)
 		/* Indicate that an error occured using prev_error in case, 
 		   errno was overwritten by success when closing dp.        */
 		prev_error = true;
-		goto Out;
-	}
-	
-	retval = new_path;
+	else 
+		retval = new_path;
 
-	Out:
-		if(dp)
-			if(closedir_inf(dp))
-				retval = NULL;
+	if(dp)
+		if(closedir_inf(dp))
+			retval = NULL;
 
-		if(!retval)
-			if(new_path)
-				free(new_path);
+	if(!retval)
+		if(new_path)
+			free(new_path);
 
-		return retval;
+	return retval;
 }
 
 

@@ -27,20 +27,19 @@ static struct users_configs *input_configs() {
     struct users_configs *retval = NULL;
     struct users_configs *input;
 
-	if(!(input = malloc_inf(sizeof(struct users_configs))))
-		goto Out;
+	if((input = malloc_inf(sizeof(struct users_configs)))) {
+		input->pdf_viewer = NULL;
 	
-	input->docs_dir_path = input->pdf_viewer = NULL;
-	
-	printf("Please enter your documents directory absolute path: ");
-	if(!(input->docs_dir_path = get_line())) 
-		goto Out;
+		printf("Please enter your documents directory absolute path: ");
+		if(!(input->docs_dir_path = get_line(stdin))) 
+			goto Out;
 
-	printf("\nPlease enter your pdf's viewer name: ");
-	if(!(input->pdf_viewer = get_line()))
-		goto Out;
+		printf("\nPlease enter your pdf's viewer name: ");
+		if(!(input->pdf_viewer = get_line(stdin)))
+			goto Out;
 
-    retval = input;
+		retval = input;
+	}
 
     Out:
         if(!retval)
@@ -66,26 +65,21 @@ int generate_config(const char *abs_config_path) {
 	int retval = -1;
 	FILE *fp;
 
-	if(!(fp = fopen_inf(abs_config_path, "w")))
-		goto Out;
-
-	if(!(configs = input_configs()))
-		goto Out;
-
-	fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
-	printf("\nYour configurations were generated succesfully.\n");
-
-	retval = 0;
-	
-	Out:
-		if(fp)
-			if(fclose_inf(fp))
-				retval = -1;
+	if((fp = fopen_inf(abs_config_path, "w")))
+		if((configs = input_configs())) {
+			fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
+			printf("\nYour configurations were generated succesfully.\n");
 		
-		if(configs)
-			free_users_configs(configs); 
+			retval = 0;
+		}
+
+	if(fp)
+		if(fclose_inf(fp))
+			retval = -1;
+	if(configs)
+		free_users_configs(configs); 
 		
-		return retval;
+	return retval;
 }
 
 
@@ -94,44 +88,35 @@ struct users_configs *read_configs(const char *abs_config_path) {
 	struct users_configs *configs = NULL;
 	FILE *fp;
 	
-	if(!(fp = fopen_inf(abs_config_path, "r"))) 
-		goto Out;
+	if((fp = fopen_inf(abs_config_path, "r")))
+		if((configs = malloc_inf(sizeof(struct users_configs)))) {
+			configs->pdf_viewer = NULL;
 	
-	if(!(configs = malloc_inf(sizeof(struct users_configs))))
-		goto Out;
-	
-	configs->docs_dir_path = configs->pdf_viewer = NULL;
-	
-	if(!(configs->docs_dir_path = fget_line(fp))) 
-		goto Out;
+			if((configs->docs_dir_path = get_line(fp)) && 
+					(configs->pdf_viewer = get_line(fp))) 
+				retval = configs;
+		}
 
-	if(!(configs->pdf_viewer = fget_line(fp))) 
-		goto Out;
+	if(fp)
+		if(fclose_inf(fp))
+			retval = NULL;
 
-	retval = configs;
-
-	Out:
-		if(fp)
-			if(fclose_inf(fp))
-				retval = NULL;
-		
-		if(!retval)
-			if(configs) {  
-				if(configs->pdf_viewer)
-					free(configs->pdf_viewer);
-				if(configs->docs_dir_path)
-					free(configs->docs_dir_path);
+	if(!retval && configs) {  
+		if(configs->pdf_viewer)
+			free(configs->pdf_viewer);
+		if(configs->docs_dir_path)
+			free(configs->docs_dir_path);
 				
-				free(configs);
-			}
+		free(configs);
+	}
 		
-		return retval;
+	return retval;
 }
 
 
 /*
  * I'm going to use this only when I'm 100% sure that everything in the struct
- * was allocated, because if not there is a potential that free() will try
+ * is allocated, because if not there is a potential that free() will try
  * to free unallocated memory address or a memory address that exists on the
  * stack.
  */
