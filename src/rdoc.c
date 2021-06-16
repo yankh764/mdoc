@@ -30,6 +30,8 @@ static char *small_let_copy(const char *);
 static int strstr_i(const char *, const char *);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(struct l_list *);
+static void search_for_doc_cleanup(char *, struct l_list *, struct l_list *);
+static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *, struct l_list *);
 
 
 /*
@@ -41,7 +43,7 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *ptr;
 
 	if((ptr = malloc_inf(sizeof(struct l_list))) &&
-			(ptr->obj = (char *) malloc_inf(obj_size)))
+	        (ptr->obj = (char *) malloc_inf(obj_size)))
 		retval = ptr;
 
 	if(!retval && ptr)
@@ -55,8 +57,7 @@ void free_l_list(struct l_list *ptr) {
 	struct l_list *prev_ptr;
 
 	while(ptr) {
-		if(ptr->obj)
-			free(ptr->obj);
+		free(ptr->obj);
 		
 		prev_ptr = ptr;
 		ptr = ptr->next;	
@@ -97,8 +98,9 @@ static int strstr_i(const char *haystack, const char *needle) {
 	char *needle_l = NULL; 
 	int retval = -1;
 	
-	if((haystack_l = small_let_copy(haystack)) &&
-			(needle_l = small_let_copy(needle))) {
+	/* If made small letter copy of haystack and needle sucessfully */
+	if((haystack_l = small_let_copy(haystack)) && 
+	          (needle_l = small_let_copy(needle))) {
 		if(strstr(haystack_l, needle_l))
 			retval = 1;
 		else 
@@ -148,7 +150,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
       doc_list_begin refers to the beginning of the documents list that is
       filled by the function, whereas doc_list_rec_begin refers to the begnning
       of the documents list that is created, filled and returned by the recursion. */
-	struct l_list *doc_list_begin, *doc_list_rec_begin, *retval;
+	struct l_list *doc_list_begin, *doc_list_rec_begin;
 	struct l_list *current_node, *current_node_rec;
 	struct dirent *entry;
 	struct stat stbuf;
@@ -157,7 +159,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	int ret;
 	DIR *dp;
 	
-	doc_list_begin = doc_list_rec_begin = retval = NULL;
+	doc_list_begin = doc_list_rec_begin = NULL;
 
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
@@ -166,23 +168,25 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 				continue;
 			
 			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
-				goto Error;
+				break;
 			
 			if(stat_inf(new_path, &stbuf))
-				goto Error;
+				break;
 
 			if(S_ISDIR(stbuf.st_mode) && recursive) {
 				/* If still not initialized try to initialize it */
 				if(!doc_list_rec_begin) { 
-					if((doc_list_rec_begin = search_for_doc(new_path, str, ignore_case, recursive)))
+					if((doc_list_rec_begin = search_for_doc((const char *) new_path, 
+					                                        str, ignore_case, recursive)))
 						current_node_rec = get_last_node(doc_list_rec_begin);
 				}	
 				else
-					if((current_node_rec->next = search_for_doc(new_path, str, ignore_case, recursive)))
+					if((current_node_rec->next = search_for_doc((const char *) new_path, 
+					                                            str, ignore_case, recursive)))
 						current_node_rec = get_last_node(current_node_rec->next);
 		
 				if(prev_error)
-					goto Error;
+					break;
 			}
 
 			free(new_path);
@@ -191,7 +195,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			if(S_ISREG(stbuf.st_mode)) {
 				if(ignore_case) {
 					if((ret = strstr_i(entry->d_name, str)) == -1)
-						goto Error;
+						break;
 					else if(ret == 0)
 						continue;
 				}
@@ -203,57 +207,63 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 				
 				if(!doc_list_begin) {
 					if(!(doc_list_begin = alloc_l_list_obj(len)))
-						goto Error;
+						break;
 			
 					current_node = doc_list_begin;
 				}
 				else
 					if(!(current_node = current_node->next = alloc_l_list_obj(len)))
-						goto Error;
+						break;
 		
 				snprintf(current_node->obj, len, "%s", entry->d_name);
 				/* Mark the next node as empty in case the current one is the last */
 				current_node->next = NULL;
 			}
 		}
-	/* Catch opendir_inf() and readdir_inf() errors */
-	if(errno)
-		goto Error;
+	
+	if(errno || prev_error)
+		search_for_doc_cleanup(new_path, doc_list_begin, doc_list_rec_begin);
 
-	/* Determine the right retval */
+	if(dp)
+		/* If error occured while closing dp and no cleanup have been done already */
+		if(closedir_inf(dp) && !prev_error) 
+			search_for_doc_cleanup(new_path, doc_list_begin, doc_list_rec_begin);
+	
+	if(prev_error)
+		doc_list_begin = doc_list_rec_begin = NULL;
+
+	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
+}
+
+
+static struct l_list *search_for_doc_retval(struct l_list *current_node, 
+		                                    struct l_list *doc_list_begin,
+											struct l_list *doc_list_rec_begin) {
 	if(doc_list_begin) {
 		if(doc_list_rec_begin)
 			current_node->next = doc_list_rec_begin;
-		
-		retval = doc_list_begin;
+
+		return doc_list_begin;
 	}
+
 	else if(doc_list_rec_begin)
-		retval = doc_list_rec_begin;
-
-	Out:
-		if(dp)
-			if(closedir_inf(dp)) 
-			/* If cleanup haven't been done already */
-				if(retval) {
-					dp = NULL;
-					retval = NULL;
-					goto Error;
-				}
-		
-		return retval;
-
+		return doc_list_rec_begin;
 	
-	Error:
-		if(new_path)
-			free(new_path);
-		if(doc_list_begin)
-			free_l_list(doc_list_begin);
-		if(doc_list_rec_begin)
-			free_l_list(doc_list_rec_begin);
+	else
+		return NULL;
+}
 
-		prev_error = true; /* errno could have been overwritten from closedir_inf() */
 
-		goto Out;
+static void search_for_doc_cleanup(char *char_ptr, struct l_list *l_list_ptr1, 
+                                   struct l_list *l_list_ptr2) {
+	if(char_ptr)
+		free(char_ptr);	
+	if(l_list_ptr1)
+		free_l_list(l_list_ptr1);
+	if(l_list_ptr2)
+		free_l_list(l_list_ptr2);
+
+	prev_error = true;
 }
 
 
@@ -285,11 +295,13 @@ unsigned int count_l_list_nodes(struct l_list *ptr) {
 
 char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursive) {
 	char *retval = NULL;
-	char *new_path = NULL;
+	char *new_path, *ret_path;
 	struct dirent *entry;
 	struct stat stbuf;
 	DIR *dp;
 
+	new_path = ret_path = NULL;
+	
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
 			if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -300,8 +312,13 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 
 			if(stat_inf(new_path, &stbuf))
 				break;
-
-			if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
+			
+			if(S_ISDIR(stbuf.st_mode) && recursive) {
+				if((ret_path = get_doc_path((const char *) new_path, full_doc_name, recursive)))
+					break;
+			}
+			
+			else if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
 				break;
 			
 			free(new_path);
@@ -312,16 +329,23 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 		/* Indicate that an error occured using prev_error in case, 
 		   errno was overwritten by success when closing dp.        */
 		prev_error = true;
-	else 
-		retval = new_path;
+	else {
+		if(new_path)
+			retval = new_path;
+		else 
+			retval = ret_path;
+	}
 
 	if(dp)
 		if(closedir_inf(dp))
 			retval = NULL;
 
-	if(!retval)
+	if(!retval) {
 		if(new_path)
 			free(new_path);
+		if(ret_path)
+			free(ret_path);
+	}
 
 	return retval;
 }

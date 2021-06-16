@@ -111,7 +111,7 @@ pid_t fork_inf(void) {
 	pid_t retval;
 	
 	if((retval = fork()) == -1)
-		fprintf(stderr, "%s: can't fork new process: %s\n", 
+		fprintf(stderr, "%s: can't fork new child process: %s\n", 
 				prog_name_inf, strerror(errno));
 
 	return retval;

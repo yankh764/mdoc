@@ -28,7 +28,7 @@ static struct users_configs *input_configs() {
     struct users_configs *input;
 
 	if((input = malloc_inf(sizeof(struct users_configs)))) {
-		input->pdf_viewer = NULL;
+		input->docs_dir_path = input->pdf_viewer = NULL;
 	
 		printf("Please enter your documents directory absolute path: ");
 		if(!(input->docs_dir_path = get_line(stdin))) 
@@ -42,15 +42,14 @@ static struct users_configs *input_configs() {
 	}
 
     Out:
-        if(!retval)
-            if(input) {  
-				if(input->pdf_viewer)
-					free(input->pdf_viewer);
-				if(input->docs_dir_path)
-					free(input->docs_dir_path);
+        if(!retval && input) {
+			if(input->pdf_viewer)
+				free(input->pdf_viewer);
+			if(input->docs_dir_path)
+				free(input->docs_dir_path);
 				
-				free(input);
-			}
+			free(input);
+		}
         
         return retval; 
 }
@@ -90,10 +89,11 @@ struct users_configs *read_configs(const char *abs_config_path) {
 	
 	if((fp = fopen_inf(abs_config_path, "r")))
 		if((configs = malloc_inf(sizeof(struct users_configs)))) {
-			configs->pdf_viewer = NULL;
+			configs->docs_dir_path = configs->pdf_viewer = NULL;
 	
+			/* If successfully read the 2 lines of configs */
 			if((configs->docs_dir_path = get_line(fp)) && 
-					(configs->pdf_viewer = get_line(fp))) 
+					   (configs->pdf_viewer = get_line(fp))) 
 				retval = configs;
 		}
 
