@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include<unistd.h>
 #include "informative.h"
 #include "input.h"
 #include "rdoc.h"
@@ -32,6 +33,8 @@ static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(struct l_list *);
 static void search_for_doc_cleanup(char *, struct l_list *, struct l_list *);
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *, struct l_list *);
+static void get_doc_path_cleanup(char *, char *);
+static char *get_doc_path_retval(char *, char *);
 
 
 /*
@@ -90,27 +93,27 @@ static char *small_let_copy(const char *str) {
 
 
 /*
- * The same as strstr() but with ignored case distinction
+ * The same as strstr() but with "ignored case distinction"
  * and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
  */
 static int strstr_i(const char *haystack, const char *needle) {
-	char *haystack_l = NULL; 
-	char *needle_l = NULL; 
+	char *haystack_small = NULL; 
+	char *needle_small = NULL; 
 	int retval = -1;
 	
 	/* If made small letter copy of haystack and needle sucessfully */
-	if((haystack_l = small_let_copy(haystack)) && 
-	          (needle_l = small_let_copy(needle))) {
-		if(strstr(haystack_l, needle_l))
+	if((haystack_small = small_let_copy(haystack)) && 
+	          (needle_small = small_let_copy(needle))) {
+		if(strstr(haystack_small, needle_small))
 			retval = 1;
 		else 
 			retval = 0; 
 	}
 
-	if(haystack_l)
-		free(haystack_l);	
-	if(needle_l)
-		free(needle_l);
+	if(haystack_small)
+		free(haystack_small);	
+	if(needle_small)
+		free(needle_small);
 
 	return retval;
 }
@@ -154,7 +157,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	struct l_list *current_node, *current_node_rec;
 	struct dirent *entry;
 	struct stat stbuf;
-	char *new_path;
+	char *new_path = NULL;
 	size_t len;
 	int ret;
 	DIR *dp;
@@ -293,9 +296,11 @@ unsigned int count_l_list_nodes(struct l_list *ptr) {
 }
 
 
+/*
+ * This function will be used only when count_l_list_nodes() returns 1.
+ */
 char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursive) {
-	char *retval = NULL;
-	char *new_path, *ret_path;
+	char *new_path, *ret_path; /* ret_path is the returned path from the recursion */
 	struct dirent *entry;
 	struct stat stbuf;
 	DIR *dp;
@@ -316,8 +321,10 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 			if(S_ISDIR(stbuf.st_mode) && recursive) {
 				if((ret_path = get_doc_path((const char *) new_path, full_doc_name, recursive)))
 					break;
+				
+				else if(prev_error)
+					break;
 			}
-			
 			else if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
 				break;
 			
@@ -325,33 +332,69 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 			new_path = NULL;
 		}
 
-	if(errno)
-		/* Indicate that an error occured using prev_error in case, 
-		   errno was overwritten by success when closing dp.        */
-		prev_error = true;
-	else {
-		if(new_path)
-			retval = new_path;
-		else 
-			retval = ret_path;
-	}
+	if(errno || prev_error)
+		get_doc_path_cleanup(new_path, ret_path);
 
 	if(dp)
-		if(closedir_inf(dp))
-			retval = NULL;
+		if(closedir_inf(dp) && !prev_error)
+			get_doc_path_cleanup(new_path, ret_path);
 
-	if(!retval) {
-		if(new_path)
-			free(new_path);
-		if(ret_path)
-			free(ret_path);
+	if(prev_error)
+		new_path = ret_path = NULL;
+
+	return get_doc_path_retval(new_path, ret_path);
+}
+
+
+static void get_doc_path_cleanup(char *char_ptr1, char *char_ptr2) {
+	if(char_ptr1)
+		free(char_ptr1);
+	if(char_ptr2)
+		free(char_ptr2);
+
+	prev_error = true;
+}
+
+
+static char *get_doc_path_retval(char *new_path, char *ret_path) {
+	/* If both of them allocated ignore new_path and free it
+	   because ret_path is the desired value                   */
+	if(new_path && ret_path) {
+		free(new_path);
+		return ret_path;
 	}
 
-	return retval;
+	else if(new_path)
+		return new_path;
+
+	else if(ret_path)
+		return ret_path;
+
+	else 
+		return NULL;
 }
 
 
-int open_doc(const char *pdf_viewer, const char *doc_path) {
-	;
-}
+int open_doc(const char *pdf_viewer_path, const char *doc_path) {
+	pid_t child_pid;
+	int wstatus;
 
+	if((child_pid = fork_inf()) == -1)
+		goto error;
+
+	else if(child_pid) {
+		if(waitpid_inf(child_pid, &wstatus, 0) == -1)
+			goto error;
+		
+		if(WIFSIGNALED(wstatus))
+			goto error;
+	}
+	else
+		if(execl("/usr/bin/firefox", "-private", doc_path, NULL))
+			goto error;
+
+	return 0;
+
+	error:
+		return -1;
+}
