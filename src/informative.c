@@ -132,7 +132,7 @@ pid_t waitpid_inf(pid_t pid, int *wstatus, int options) {
 int execv_inf(const char *pathname, char *const *argv) {
 	int retval = 0;
 
-	if((retval = execv(pathname, argv)))
+	if((retval = execv(pathname, argv)) == -1)
 		fprintf(stderr, "%s: can't execute '%s': %s\n", 
 				prog_name_inf, pathname, strerror(errno));
 
@@ -146,6 +146,17 @@ void *realloc_inf(void *ptr, size_t size) {
 	if(!(retval = realloc(ptr, size)))
 		fprintf(stderr, "%s: can't allocate memory: %s\n", 
 				prog_name_inf, strerror(errno));
+
+	return retval;
+}
+
+
+int execvp_inf(const char *file, char *const *argv) {
+	int retval = 0;
+
+	if((retval = execvp(file, argv)) == -1)
+		fprintf(stderr, "%s: can't execute '%s': %s\n", 
+				prog_name_inf, file, strerror(errno));
 
 	return retval;
 }

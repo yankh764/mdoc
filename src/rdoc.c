@@ -12,9 +12,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include<unistd.h>
-#include "informative.h"
+#include "exec.h"
 #include "input.h"
+#include "informative.h"
 #include "rdoc.h"
 
 #define ANSI_COLOR_RED   "\e[0;31m"
@@ -366,7 +366,7 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 
 	else if(new_path)
 		return new_path;
-
+	
 	else if(ret_path)
 		return ret_path;
 
@@ -375,26 +375,8 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-int open_doc(const char *pdf_viewer_path, const char *doc_path) {
-	pid_t child_pid;
-	int wstatus;
+int open_doc(const char *pdf_viewer, const char *doc_path) {
+	char *const x = {pdf_viewer, doc_path, NULL};
 
-	if((child_pid = fork_inf()) == -1)
-		goto error;
-
-	else if(child_pid) {
-		if(waitpid_inf(child_pid, &wstatus, 0) == -1)
-			goto error;
-		
-		if(WIFSIGNALED(wstatus))
-			goto error;
-	}
-	else
-		if(execl("/usr/bin/firefox", "-private", doc_path, NULL))
-			goto error;
-
-	return 0;
-
-	error:
-		return -1;
+	return execvp_process(pdf_viewer, x);
 }
