@@ -29,12 +29,15 @@ bool prev_error;
 static struct l_list *alloc_l_list_obj(size_t);
 static char *small_let_copy(const char *);
 static int strstr_i(const char *, const char *);
+static void strstr_i_cleanup(char *, char *);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(struct l_list *);
-static void search_for_doc_cleanup(char *, struct l_list *, struct l_list *);
-static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *, struct l_list *);
-static void get_doc_path_cleanup(char *, char *);
+static void search_for_doc_error(char *, struct l_list *, struct l_list *);
+static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  struct l_list *);
+static void get_doc_path_error(char *, char *);
 static char *get_doc_path_retval(char *, char *);
+static void print_colorful(struct l_list *);
+static void print_no_color(struct l_list *);
 
 
 /*
@@ -76,19 +79,19 @@ void free_l_list(struct l_list *ptr) {
 static char *small_let_copy(const char *str) {
 	size_t len = strlen(str) + 1;
 	unsigned int i;
-	char *str_c; // Copy of str
+	char *str_small; /* Small letter copy of str */
 
-	if((str_c = (char *) malloc_inf(len))) {
+	if((str_small = (char *) malloc_inf(len))) {
 		for(i=0; str[i]!='\0'; i++) {
 			if(isupper(str[i]))
-				str_c[i] = tolower(str[i]);
+				str_small[i] = tolower(str[i]);
 			else
-				str_c[i] = str[i];
+				str_small[i] = str[i];
 		}
-		str_c[i] = '\0';
+		str_small[i] = '\0';
 	}
 	
-	return str_c;
+	return str_small;
 }
 
 
@@ -109,13 +112,18 @@ static int strstr_i(const char *haystack, const char *needle) {
 		else 
 			retval = 0; 
 	}
-
-	if(haystack_small)
-		free(haystack_small);	
-	if(needle_small)
-		free(needle_small);
+	
+	strstr_i_cleanup(haystack_small, needle_small);
 
 	return retval;
+}
+
+
+static void strstr_i_cleanup(char *ptr1, char *ptr2) {
+	if(ptr1)
+		free(ptr1);
+	if(ptr2)
+		free(ptr2);
 }
 
 
@@ -133,10 +141,8 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
 static struct l_list *get_last_node(struct l_list *ptr) {
 	struct l_list *prev = NULL;
 
-	while(ptr) {
+	for(; ptr; ptr=ptr->next)
 		prev = ptr;
-		ptr = ptr->next;
-	}
 
 	return prev;
 }
@@ -225,12 +231,12 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 		}
 	
 	if(errno || prev_error)
-		search_for_doc_cleanup(new_path, doc_list_begin, doc_list_rec_begin);
+		search_for_doc_error(new_path, doc_list_begin, doc_list_rec_begin);
 
 	if(dp)
 		/* If error occured while closing dp and no cleanup have been done already */
 		if(closedir_inf(dp) && !prev_error) 
-			search_for_doc_cleanup(new_path, doc_list_begin, doc_list_rec_begin);
+			search_for_doc_error(new_path, doc_list_begin, doc_list_rec_begin);
 	
 	if(prev_error)
 		doc_list_begin = doc_list_rec_begin = NULL;
@@ -256,9 +262,11 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
 		return NULL;
 }
 
-
-static void search_for_doc_cleanup(char *char_ptr, struct l_list *l_list_ptr1, 
-                                   struct l_list *l_list_ptr2) {
+/*
+ * Function for the cleanup when error occures in search_for_doc().
+ */
+static void search_for_doc_error(char *char_ptr, struct l_list *l_list_ptr1, 
+                                 struct l_list *l_list_ptr2) {
 	if(char_ptr)
 		free(char_ptr);	
 	if(l_list_ptr1)
@@ -274,22 +282,34 @@ void display_docs(struct l_list *ptr, bool color_status) {
 	if(ptr) {
 		printf("These are the documents that were found:\n\n");
 
-		while(ptr) {
-			if(color_status)
-				printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
-			else
-				printf("<*> %s\n", ptr->obj);
-			
-			ptr = ptr->next;	
-		}
+		if(color_status)
+			print_colorful(ptr);
+		else
+			print_no_color(ptr);
 	}
+}
+
+
+static void print_colorful(struct l_list *ptr) {
+	for(; ptr; ptr=ptr->next)
+		printf("<*>" ANSI_COLOR_RED " %s" ANSI_COLOR_RESET "\n", ptr->obj);
+
+	printf("\n");
+}
+
+
+static void print_no_color(struct l_list *ptr) {
+	for(; ptr; ptr=ptr->next)
+		printf("<*> %s\n", ptr->obj);
+	
+	printf("\n");
 }
 
 
 unsigned int count_l_list_nodes(struct l_list *ptr) {
 	unsigned int i;
 
-	for(i=0; ptr!=NULL; i++)
+	for(i=0; ptr; i++)
 		ptr = ptr->next;
 
 	return i;
@@ -333,11 +353,11 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 		}
 
 	if(errno || prev_error)
-		get_doc_path_cleanup(new_path, ret_path);
+		get_doc_path_error(new_path, ret_path);
 
 	if(dp)
 		if(closedir_inf(dp) && !prev_error)
-			get_doc_path_cleanup(new_path, ret_path);
+			get_doc_path_error(new_path, ret_path);
 
 	if(prev_error)
 		new_path = ret_path = NULL;
@@ -345,8 +365,10 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 	return get_doc_path_retval(new_path, ret_path);
 }
 
-
-static void get_doc_path_cleanup(char *char_ptr1, char *char_ptr2) {
+/*
+ * Function for the cleanup when error occures in get_doc_path().
+ */
+static void get_doc_path_error(char *char_ptr1, char *char_ptr2) {
 	if(char_ptr1)
 		free(char_ptr1);
 	if(char_ptr2)
@@ -357,29 +379,28 @@ static void get_doc_path_cleanup(char *char_ptr1, char *char_ptr2) {
 
 
 static char *get_doc_path_retval(char *new_path, char *ret_path) {
-	/* If both of them allocated ignore new_path and free it
-	   because ret_path is the desired value                   */
-	if(new_path && ret_path) {
-		free(new_path);
+	if(ret_path) {
+	/* If both of them are allocated ignore new_path and
+	   free it because ret_path is the desired value     */
+		if(new_path)
+			free(new_path);
+
 		return ret_path;
 	}
-
 	else if(new_path)
 		return new_path;
 	
-	else if(ret_path)
-		return ret_path;
-
 	else 
 		return NULL;
 }
 
 
-int open_doc(char *pdf_viewer, char *doc_path) {
-	char *x[3];
-	x[0] = pdf_viewer;
-	x[1] = doc_path;
-	x[2] = NULL;
+int open_doc(const char *pdf_viewer, const char *doc_path) {
+	char *const x[] = {(char *) pdf_viewer, (char *) doc_path, NULL};
+	int retval;
 
-	return execvp_process(pdf_viewer, x);
+	if(!(retval = execvp_process(pdf_viewer, x)))
+		printf("Opening: %s\n", doc_path);
+	
+	return retval;
 }

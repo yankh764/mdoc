@@ -8,6 +8,7 @@
 
 extern const char *prog_name_inf; 
 
+
 void *malloc_inf(size_t);
 char *fgets_inf(char *, int, FILE *);
 FILE *fopen_inf(const char *, const char *);
@@ -18,8 +19,8 @@ int closedir_inf(DIR *);
 struct dirent *readdir_inf(DIR *);
 pid_t fork_inf(void);
 pid_t waitpid_inf(pid_t, int *, int);
-int execv_inf(const char *, char **);
+int execv_inf(const char *, char *const *);
 void *realloc_inf(void *, size_t);
-int execvp_inf(const char *, char **);
+int execvp_inf(const char *, char *const *);
 
 #endif

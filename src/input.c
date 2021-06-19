@@ -42,9 +42,8 @@ char *get_line(FILE *stream) {
 	
 	retval = line;
 
-	if(!retval)
-		if(line_address)
-			free(line_address);
+	if(!retval && line_address)
+		free(line_address);
 
 	return retval;
 }

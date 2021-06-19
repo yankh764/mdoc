@@ -42,15 +42,9 @@ static struct users_configs *input_configs() {
 	}
 
     Out:
-        if(!retval && input) {
-			if(input->pdf_viewer)
-				free(input->pdf_viewer);
-			if(input->docs_dir_path)
-				free(input->docs_dir_path);
-				
-			free(input);
-		}
-        
+        if(!retval && input)
+			free_users_configs(input);
+
         return retval; 
 }
 
@@ -75,6 +69,7 @@ int generate_config(const char *abs_config_path) {
 	if(fp)
 		if(fclose_inf(fp))
 			retval = -1;
+	
 	if(configs)
 		free_users_configs(configs); 
 		
@@ -93,7 +88,7 @@ struct users_configs *read_configs(const char *abs_config_path) {
 	
 			/* If successfully read the 2 lines of configs */
 			if((configs->docs_dir_path = get_line(fp)) && 
-					   (configs->pdf_viewer = get_line(fp))) 
+					(configs->pdf_viewer = get_line(fp))) 
 				retval = configs;
 		}
 
@@ -101,28 +96,19 @@ struct users_configs *read_configs(const char *abs_config_path) {
 		if(fclose_inf(fp))
 			retval = NULL;
 
-	if(!retval && configs) {  
-		if(configs->pdf_viewer)
-			free(configs->pdf_viewer);
-		if(configs->docs_dir_path)
-			free(configs->docs_dir_path);
-				
-		free(configs);
-	}
-		
+	if(!retval && configs)
+		free_users_configs(configs);
+
 	return retval;
 }
 
 
-/*
- * I'm going to use this only when I'm 100% sure that everything in the struct
- * is allocated, because if not there is a potential that free() will try
- * to free unallocated memory address or a memory address that exists on the
- * stack.
- */
 void free_users_configs(struct users_configs *ptr) {
-	free(ptr->pdf_viewer);
-	free(ptr->docs_dir_path);
+	if(ptr->pdf_viewer)
+		free(ptr->pdf_viewer);
+	if(ptr->docs_dir_path)
+		free(ptr->docs_dir_path);
+	
 	free(ptr);
 }
 

@@ -8,16 +8,16 @@
 ---------------------------------------------------------
 */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include "informative.h"
 #include "exec.h"
+
 
 /*
  * Fork a new child and execute pathname with the given argv,
  * using execvp()
  */
-int execvp_process(const char *executable, char **argv) {
+int execvp_process(const char *executable, char *const *argv) {
     int retval = -1;
     int wstatus;
     pid_t pid;
@@ -39,8 +39,8 @@ int execvp_process(const char *executable, char **argv) {
            or change its state. Then continue executing the parent
            process.                                                */
         if(waitpid_inf(pid, &wstatus, 0) != -1)
-        /* If child exited normally and the exit it's exit 
-           status isn't 127. See comment on line 30.        */
+            /* If child exited normally and it's exit 
+               status isn't 127. See comment on line 30 */
             if(WIFEXITED(wstatus) && WEXITSTATUS(wstatus) != 127)
                 retval = 0;
     
