@@ -17,7 +17,7 @@
  * Fork a new child and execute pathname with the given argv,
  * using execvp()
  */
-int execvp_process(const char *executable, char *const *argv) {
+int execvp_process(const char *executable, char **argv) {
     int retval = -1;
     int wstatus;
     pid_t pid;
@@ -27,25 +27,22 @@ int execvp_process(const char *executable, char *const *argv) {
     /* Child Process */
     if(pid == 0) { 
         if(execvp_inf(executable, argv))
+        /* The exit status of 127 is the value set by the shell 
+           when a command is not found and the recommended exit 
+           status by POSIX in these situations.                 */
             _Exit(127);
     }
     
     /* Parent Process */
     else if(pid > 0)
-        /* Wait for child with process id of pid to finish 
-           execution or change its state then continue executing
-           the parent process.                                   */
+        /* Wait for child with process id of pid to get terminated 
+           or change its state. Then continue executing the parent
+           process.                                                */
         if(waitpid_inf(pid, &wstatus, 0) != -1)
-        /* Note: 
-         * I changed my mind and I think that theres no need to check 
-         * how the child process got terminated because I don't see any
-         * good reason why it should effect the current program. 
-         * So for now the parent process will return succes as long as
-         * execvp() and waitpid() returns success.                        */
-            
-            /* If child exited normally */
-            if(WIFEXITED(wstatus))
-                retval = WIFEXITED(wstatus);
+        /* If child exited normally and the exit it's exit 
+           status isn't 127. See comment on line 30.        */
+            if(WIFEXITED(wstatus) && WEXITSTATUS(wstatus) != 127)
+                retval = 0;
     
     return retval; 
 }

@@ -18,8 +18,8 @@ int closedir_inf(DIR *);
 struct dirent *readdir_inf(DIR *);
 pid_t fork_inf(void);
 pid_t waitpid_inf(pid_t, int *, int);
-int execv_inf(const char *, char *const *);
+int execv_inf(const char *, char **);
 void *realloc_inf(void *, size_t);
-int execvp_inf(const char *, char *const *);
+int execvp_inf(const char *, char **);
 
 #endif

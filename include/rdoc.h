@@ -16,7 +16,7 @@ void free_l_list(struct l_list *);
 struct l_list *search_for_doc(const char *, const char *, bool, bool);
 void display_docs(struct l_list *, bool);
 unsigned int count_l_list_nodes(struct l_list *);
-int open_doc(const char *, const char *);
 char *get_doc_path(const char *, const char *, bool);
+int open_doc(char *, char *);
 
 #endif

@@ -375,8 +375,11 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-int open_doc(const char *pdf_viewer, const char *doc_path) {
-	char *const x = {pdf_viewer, doc_path, NULL};
+int open_doc(char *pdf_viewer, char *doc_path) {
+	char *x[3];
+	x[0] = pdf_viewer;
+	x[1] = doc_path;
+	x[2] = NULL;
 
 	return execvp_process(pdf_viewer, x);
 }
