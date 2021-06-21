@@ -38,6 +38,8 @@ static void get_doc_path_error(char *, char *);
 static char *get_doc_path_retval(char *, char *);
 static void print_colorful(struct l_list *);
 static void print_no_color(struct l_list *);
+static void save_l_list_obj(struct l_list *, char **, const unsigned int);
+static void sort_alpha_algorithim(char **, char **, const unsigned int);
 
 
 /*
@@ -150,7 +152,8 @@ static struct l_list *get_last_node(struct l_list *ptr) {
 
 /*
  * The function will search the passed str sequence in all the 
- * existing documents in the documents directory. 
+ * existing documents in the documents directory. If str is NULL
+ * it'll save all the founded docs.
  */
 struct l_list *search_for_doc(const char *dir_path, const char *str, 
                               bool ignore_case, bool recursive) {
@@ -202,15 +205,17 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			new_path = NULL; /* Mark it as already free */
 
 			if(S_ISREG(stbuf.st_mode)) {
-				if(ignore_case) {
-					if((ret = strstr_i(entry->d_name, str)) == -1)
-						break;
-					else if(ret == 0)
-						continue;
+				if(str) {
+					if(ignore_case) {
+						if((ret = strstr_i(entry->d_name, str)) == -1)
+							break;
+						else if(ret == 0)
+							continue;
+					}
+					else 
+						if(!strstr(entry->d_name, str))
+							continue;
 				}
-				else 
-					if(!strstr(entry->d_name, str))
-						continue;
 
 				len = strlen(entry->d_name) + 1;
 				
@@ -403,4 +408,53 @@ int open_doc(const char *pdf_viewer, const char *doc_path) {
 		printf("Opening: %s\n", doc_path);
 	
 	return retval;
+}
+
+
+/*
+ * Sort the unsorted linked list alphabetically.
+ */
+int sort_alpha(struct l_list *unsorted_list) {
+	const unsigned int obj_num = count_l_list_nodes(unsorted_list);	
+	char *all_obj_sorted[obj_num];
+	char *all_obj_unsorted[obj_num];
+	
+	save_l_list_obj(unsorted_list, all_obj, obj_num);
+		
+}
+
+
+/*
+ * Save every obj address in the linked list to the array of pointers.
+ */
+static void save_l_list_obj(struct l_list *ptr, char **all_obj, 
+                            const unsigned int all_obj_size) {
+	unsigned int i;
+
+	for(i=0; i<all_obj_size; ptr=ptr->next)
+		all_obj[i++] = ptr->obj;
+
+	all_obj[i] = NULL;
+}
+
+
+/*
+ * Sort the unsorted array of pointers alphabetically and save it to sorted.
+ */
+static void sort_alpha_algorithim(char **unsorted, char **sorted, 
+                                  const unsigned int size) {
+	char *current_word_small = NULL;
+	int retval = -1;
+	unsigned int i;
+
+	for(i=0; i<size; i++) {
+		if(unsorted[i] == NULL)
+			continue;
+		/* Convert it to small letter to ignore the diffrent values 
+		   of capital letters in ascii.                             */
+		if(!(current_word_small = small_let_copy((const char *) unsorted[i])))
+			break;
+
+		
+	}
 }
