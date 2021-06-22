@@ -3,7 +3,7 @@
 | License: GNU GPL-3.0                                  |
 ---------------------------------------------------------
 | This source file contains all the necessary functions |
-| for the config management of the rdoc program.        |
+| for the config management of the docm program.        |
 ---------------------------------------------------------
 */
 

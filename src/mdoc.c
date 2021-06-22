@@ -3,19 +3,19 @@
 | License: GNU GPL-3.0                                  |
 ---------------------------------------------------------
 | This source file contains all the necessary functions |
-| for the rdoc program.                                 |
+| for the mdoc program.                                 |
 ---------------------------------------------------------
 */
 
 #include <stdio.h>
 #include <errno.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include "exec.h"
 #include "input.h"
+#include "strman.h"
 #include "informative.h"
-#include "rdoc.h"
+#include "mdoc.h"
 
 #define ANSI_COLOR_RED   "\e[0;31m"
 #define ANSI_COLOR_RESET "\e[0m"
@@ -27,9 +27,6 @@ bool prev_error;
 
 /* Static Functions Prototype */
 static struct l_list *alloc_l_list_obj(size_t);
-static char *small_let_copy(const char *);
-static int strstr_i(const char *, const char *);
-static void strstr_i_cleanup(char *, char *);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(struct l_list *);
 static void search_for_doc_error(char *, struct l_list *, struct l_list *);
@@ -39,7 +36,6 @@ static char *get_doc_path_retval(char *, char *);
 static void print_colorful(struct l_list *);
 static void print_no_color(struct l_list *);
 static void save_l_list_obj(struct l_list *, char **, const unsigned int);
-static void sort_alpha_algorithim(char **, char **, const unsigned int);
 
 
 /*
@@ -72,60 +68,6 @@ void free_l_list(struct l_list *ptr) {
 		
 		free(prev_ptr);
 	}
-}
-
-
-/*
- * Make a small letters copy of str.
- */
-static char *small_let_copy(const char *str) {
-	size_t len = strlen(str) + 1;
-	unsigned int i;
-	char *str_small; /* Small letter copy of str */
-
-	if((str_small = (char *) malloc_inf(len))) {
-		for(i=0; str[i]!='\0'; i++) {
-			if(isupper(str[i]))
-				str_small[i] = tolower(str[i]);
-			else
-				str_small[i] = str[i];
-		}
-		str_small[i] = '\0';
-	}
-	
-	return str_small;
-}
-
-
-/*
- * The same as strstr() but with "ignored case distinction"
- * and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
- */
-static int strstr_i(const char *haystack, const char *needle) {
-	char *haystack_small = NULL; 
-	char *needle_small = NULL; 
-	int retval = -1;
-	
-	/* If made small letter copy of haystack and needle sucessfully */
-	if((haystack_small = small_let_copy(haystack)) && 
-	          (needle_small = small_let_copy(needle))) {
-		if(strstr(haystack_small, needle_small))
-			retval = 1;
-		else 
-			retval = 0; 
-	}
-	
-	strstr_i_cleanup(haystack_small, needle_small);
-
-	return retval;
-}
-
-
-static void strstr_i_cleanup(char *ptr1, char *ptr2) {
-	if(ptr1)
-		free(ptr1);
-	if(ptr2)
-		free(ptr2);
 }
 
 
@@ -414,47 +356,30 @@ int open_doc(const char *pdf_viewer, const char *doc_path) {
 /*
  * Sort the unsorted linked list alphabetically.
  */
-int sort_alpha(struct l_list *unsorted_list) {
-	const unsigned int obj_num = count_l_list_nodes(unsorted_list);	
-	char *all_obj_sorted[obj_num];
-	char *all_obj_unsorted[obj_num];
+int sort_alpha(struct l_list *unsorted_l_list) {
+	const unsigned int obj_num = count_l_list_nodes(unsorted_l_list);	
+	char *unsorted_array[obj_num];
+	char *sorted_array[obj_num];
+	int retval;
+
+	save_l_list_obj(unsorted_l_list, unsorted_array, obj_num);
+	retval = strsort_alpha(unsorted_array, sorted_array, obj_num);
+	for(int i=0; sorted_array[i]!=NULL; i++)
+		printf("%s\n", sorted_array[i]);
 	
-	save_l_list_obj(unsorted_list, all_obj, obj_num);
-		
+	return retval;
 }
 
 
 /*
  * Save every obj address in the linked list to the array of pointers.
  */
-static void save_l_list_obj(struct l_list *ptr, char **all_obj, 
-                            const unsigned int all_obj_size) {
+static void save_l_list_obj(struct l_list *ptr, char **array, 
+                            const unsigned int array_size) {
 	unsigned int i;
 
-	for(i=0; i<all_obj_size; ptr=ptr->next)
-		all_obj[i++] = ptr->obj;
+	for(i=0; i<array_size; ptr=ptr->next)
+		array[i++] = ptr->obj;
 
-	all_obj[i] = NULL;
-}
-
-
-/*
- * Sort the unsorted array of pointers alphabetically and save it to sorted.
- */
-static void sort_alpha_algorithim(char **unsorted, char **sorted, 
-                                  const unsigned int size) {
-	char *current_word_small = NULL;
-	int retval = -1;
-	unsigned int i;
-
-	for(i=0; i<size; i++) {
-		if(unsorted[i] == NULL)
-			continue;
-		/* Convert it to small letter to ignore the diffrent values 
-		   of capital letters in ascii.                             */
-		if(!(current_word_small = small_let_copy((const char *) unsorted[i])))
-			break;
-
-		
-	}
+	array[i] = NULL;
 }

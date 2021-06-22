@@ -1,5 +1,5 @@
-#ifndef RDOC_H
-#define RDOC_H
+#ifndef MDOC_H
+#define MDOC_H
 
 #include <stdbool.h>
 
