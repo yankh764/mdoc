@@ -3,7 +3,7 @@
 | License: GNU GPL-3.0                                  |
 ---------------------------------------------------------
 | This source file contains all the necessary functions |
-| for the config management of the docm program.        |
+| for the config management of the mdoc program.        |
 ---------------------------------------------------------
 */
 
@@ -60,9 +60,10 @@ int generate_config(const char *abs_config_path) {
 
 	if((fp = fopen_inf(abs_config_path, "w")))
 		if((configs = input_configs())) {
+			
 			fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
 			printf("\nYour configurations were generated succesfully.\n");
-		
+			
 			retval = 0;
 		}
 
@@ -84,7 +85,7 @@ struct users_configs *read_configs(const char *abs_config_path) {
 	
 	if((fp = fopen_inf(abs_config_path, "r")))
 		if((configs = malloc_inf(sizeof(struct users_configs)))) {
-			configs->docs_dir_path = configs->pdf_viewer = NULL;
+			configs->pdf_viewer = NULL;
 	
 			/* If successfully read the 2 lines of configs */
 			if((configs->docs_dir_path = get_line(fp)) && 

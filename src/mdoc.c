@@ -47,7 +47,7 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *ptr;
 
 	if((ptr = malloc_inf(sizeof(struct l_list))) &&
-	        (ptr->obj = (char *) malloc_inf(obj_size)))
+	            (ptr->obj = (char *) malloc_inf(obj_size)))
 		retval = ptr;
 
 	if(!retval && ptr)
@@ -147,6 +147,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			new_path = NULL; /* Mark it as already free */
 
 			if(S_ISREG(stbuf.st_mode)) {
+			/* If str is NULL, save every file name to the linked list */
 				if(str) {
 					if(ignore_case) {
 						if((ret = strstr_i(entry->d_name, str)) == -1)
@@ -334,6 +335,7 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 
 		return ret_path;
 	}
+
 	else if(new_path)
 		return new_path;
 	

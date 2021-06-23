@@ -14,8 +14,8 @@
 
 
 /*
- * Fork a new child and execute pathname with the given argv,
- * using execvp()
+ * Fork a new child and execute the executable with the given argv,
+ * using execvp().
  */
 int execvp_process(const char *executable, char *const *argv) {
     int retval = -1;

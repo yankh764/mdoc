@@ -19,7 +19,7 @@
 /* Static Functions Prototype */
 static void strstr_i_cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
-static bool comp_alpha(const char *, const char *);
+static bool alpha_cmp(const char *, const char *);
 
 
 /*
@@ -54,8 +54,9 @@ int strstr_i(const char *haystack, const char *needle) {
 	int retval = -1;
 	
 	/* If made small letter copy of haystack and needle sucessfully */
-	if((haystack_small = small_let_copy(haystack)) && 
-	          (needle_small = small_let_copy(needle))) {
+	if((haystack_small = small_let_copy(haystack)) 
+	 && (needle_small = small_let_copy(needle))) {
+		
 		if(strstr(haystack_small, needle_small))
 			retval = 1;
 		else 
@@ -112,32 +113,20 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 		if(array[i] == NULL)
 			continue;
 		
-		if(!smallest_word) {
-			/* Convert it to small letter to ignore the diffrent values 
-			   of the letters case in the ascii.                        */
-			if(!(smallest_word = small_let_copy((const char *) array[i])))
-				break;
-
-			smallest_word_i = i;
-		}
-		else { 	
+		if(smallest_word) {
 			if(!(current_word = small_let_copy((const char *) array[i])))
-				break;
+				goto Error;
 
-			if(comp_alpha((const char *) smallest_word, (const char *) current_word)) {
+			if(alpha_cmp((const char *) smallest_word, (const char *) current_word)) {
 				free(smallest_word);
 				smallest_word = current_word;
 				smallest_word_i = i;
 			}
-			else
-				free(current_word);
 		}
+		else 
+			if((smallest_word = small_let_copy((const char *) array[i])))
+				smallest_word_i = i;
 	}
-	if(!errno)
-		retval = smallest_word_i;
-
-	if(smallest_word)
-		free(smallest_word);
 
 	return retval;
 }
@@ -147,15 +136,22 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
  * Return 1 if word_to_check should come before assumed_smaller
  * alphabetically, otherwise return 0.
  */
-static bool comp_alpha(const char *assumed_smaller, const char *word_to_check) {
-	unsigned int i;
-	bool retval = 0;
-
-	for(i=0; assumed_smaller[i]!='\0' || word_to_check[i]!='\0'; i++)
-		if(assumed_smaller[i] > word_to_check[i]) {
-			retval = 1;
-			break;
-		}
+static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
+	size_t assumed_len = strlen(assumed_smaller);
+	size_t check_len = strlen(word_to_check);
+	size_t min_len, i;
 	
-	return retval; 
+	min_len = (assumed_len > check_len) ? assumed_len : check_len; 
+	
+	for(i=0; i<min_len; i++)
+	/* If both chars are alphabetical characters check 
+	   their values.                                   */
+		if(isalpha(word_to_check[i]) 
+		 && isalpha(assumed_smaller[i]))
+			if(word_to_check[i] < assumed_smaller[i])
+				return 1;
+	
+	/* If haven't returned yet, return 1 if  
+	   check_len > assumed_len otherwise return 0 */	
+	return (check_len > assumed_len); 
 }
