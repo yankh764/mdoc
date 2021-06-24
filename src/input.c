@@ -22,8 +22,8 @@ char *get_line(FILE *stream) {
 
 	retval = line_address = line = NULL;
 
-	for(i=0; (c = getc(stream))!=EOF; i++) {
-		if(c == '\n')
+	for(i=0; (c = getc(stream)); i++) {
+		if(c == '\n' || c == EOF)
 			break;
 		
 		if(!(line = (char *) realloc_inf(line, i+1)))

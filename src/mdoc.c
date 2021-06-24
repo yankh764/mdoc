@@ -46,8 +46,8 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
-	if((ptr = malloc_inf(sizeof(struct l_list))) &&
-	            (ptr->obj = (char *) malloc_inf(obj_size)))
+	if((ptr = malloc_inf(sizeof(struct l_list)))
+	 && (ptr->obj = (char *) malloc_inf(obj_size)))
 		retval = ptr;
 
 	if(!retval && ptr)
@@ -194,8 +194,8 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 
 
 static struct l_list *search_for_doc_retval(struct l_list *current_node, 
-		                                    struct l_list *doc_list_begin,
-											struct l_list *doc_list_rec_begin) {
+                                            struct l_list *doc_list_begin,
+                                            struct l_list *doc_list_rec_begin) {
 	if(doc_list_begin) {
 		if(doc_list_rec_begin)
 			current_node->next = doc_list_rec_begin;
@@ -356,18 +356,19 @@ int open_doc(const char *pdf_viewer, const char *doc_path) {
 
 
 /*
- * Sort the unsorted linked list alphabetically.
+ * Sort the linked list of docs alphabetically.
  */
-int sort_alpha(struct l_list *unsorted_l_list) {
+int sort_docs_alpha(struct l_list *unsorted_l_list) {
 	const unsigned int obj_num = count_l_list_nodes(unsorted_l_list);	
 	char *unsorted_array[obj_num];
 	char *sorted_array[obj_num];
 	int retval;
 
 	save_l_list_obj(unsorted_l_list, unsorted_array, obj_num);
-	retval = strsort_alpha(unsorted_array, sorted_array, obj_num);
-	for(int i=0; sorted_array[i]!=NULL; i++)
-		printf("%s\n", sorted_array[i]);
+	if((retval = strsort_alpha(unsorted_array, sorted_array, obj_num)) != -1) {
+		for(int i=0; sorted_array[i]!=NULL; i++)
+			printf("%s\n", sorted_array[i]);
+	}
 	
 	return retval;
 }

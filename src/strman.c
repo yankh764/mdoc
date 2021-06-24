@@ -17,10 +17,10 @@
 
 
 /* Static Functions Prototype */
-static void strstr_i_cleanup(char *, char *);
+static void cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
-
+static void adjust_val_after_alpha_cmp(char *, char *, unsigned int *, unsigned int);
 
 /*
  * Make a small letters copy of str.
@@ -63,13 +63,13 @@ int strstr_i(const char *haystack, const char *needle) {
 			retval = 0; 
 	}
 	
-	strstr_i_cleanup(haystack_small, needle_small);
+	cleanup(haystack_small, needle_small);
 
 	return retval;
 }
 
 
-static void strstr_i_cleanup(char *ptr1, char *ptr2) {
+static void cleanup(char *ptr1, char *ptr2) {
 	if(ptr1)
 		free(ptr1);
 	if(ptr2)
@@ -81,23 +81,22 @@ static void strstr_i_cleanup(char *ptr1, char *ptr2) {
  * Sort the array of pointers alphabetically and save it to sorted.
  */
 int strsort_alpha(char **unsorted, char **sorted, 
-                   const unsigned int size) {
+                  const unsigned int size) {
 	unsigned int i;
 	long int ret_i;
-	int retval = 0;
 
 	for(i=0; i<size; i++) {
-		if((ret_i = get_smallest_word_i(unsorted, size)) != -1)
-			sorted[i] = unsorted[ret_i];
-		else {
-			retval = -1;
-			break;
-		}
+		if((ret_i = get_smallest_word_i(unsorted, size)) == -1)
+			return -1;
+		
+		sorted[i] = unsorted[ret_i];
+		unsorted[ret_i] = NULL;
 	}
-
-	return retval;
+	sorted[i] = NULL;
+	
+	return 0;
 }
-
+	
 
 /*
  * Return the index of the word that has letters with a 
@@ -112,24 +111,51 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 	for(i=0, smallest_word_i=0; i<size; i++) {
 		if(array[i] == NULL)
 			continue;
-		
+			
 		if(smallest_word) {
 			if(!(current_word = small_let_copy((const char *) array[i])))
-				goto Error;
+				break;
 
 			if(alpha_cmp((const char *) smallest_word, (const char *) current_word)) {
-				free(smallest_word);
-				smallest_word = current_word;
-				smallest_word_i = i;
+				adjust_val_after_alpha_cmp(smallest_word, current_word, &smallest_word_i, i);
+				//smallest_word = current_word;
+				//smallest_word_i = i;
+				current_word = NULL;
+			}
+			else {
+				free(current_word);
+				current_word = NULL;	
 			}
 		}
-		else 
-			if((smallest_word = small_let_copy((const char *) array[i])))
-				smallest_word_i = i;
+		else {
+			if(!(smallest_word = small_let_copy((const char *) array[i])))
+				break;
+			
+			smallest_word_i = i;
+		}
 	}
+	if(!errno)
+		retval = smallest_word_i;
+
+	cleanup(smallest_word, current_word);
 
 	return retval;
 }
+
+
+/*
+ * Adjust the passed variables values from get_smallest_word_i()
+ * to the right values if alpha_cmp() returns 1.
+ */
+static void adjust_val_after_alpha_cmp(char *smallest_word, 
+                                       char *current_word, 
+                                       unsigned int *smallest_word_i, 
+									   unsigned int current_word_i) {
+	free(smallest_word);
+	smallest_word = current_word;
+	*smallest_word_i = current_word_i;
+	current_word = NULL;
+} 
 
 
 /*
@@ -152,6 +178,6 @@ static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
 				return 1;
 	
 	/* If haven't returned yet, return 1 if  
-	   check_len > assumed_len otherwise return 0 */	
+	   check_len > assumed_len, otherwise return 0 */	
 	return (check_len > assumed_len); 
 }

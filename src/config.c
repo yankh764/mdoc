@@ -88,8 +88,8 @@ struct users_configs *read_configs(const char *abs_config_path) {
 			configs->pdf_viewer = NULL;
 	
 			/* If successfully read the 2 lines of configs */
-			if((configs->docs_dir_path = get_line(fp)) && 
-					(configs->pdf_viewer = get_line(fp))) 
+			if((configs->docs_dir_path = get_line(fp)) 
+			 &&	(configs->pdf_viewer = get_line(fp))) 
 				retval = configs;
 		}
 
