@@ -58,7 +58,7 @@ int generate_config(const char *abs_config_path) {
 	int retval = -1;
 	FILE *fp;
 
-	if((fp = fopen_inf(abs_config_path, "w")))
+	if((fp = fopen_inf(abs_config_path, "w"))) {
 		if((configs = input_configs())) {
 			
 			fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
@@ -66,14 +66,12 @@ int generate_config(const char *abs_config_path) {
 			
 			retval = 0;
 		}
-
-	if(fp)
-		if(fclose_inf(fp))
-			retval = -1;
-	
-	if(configs)
 		free_users_configs(configs); 
 		
+		if(fclose_inf(fp))
+			retval = -1;
+	}	
+
 	return retval;
 }
 
@@ -83,7 +81,7 @@ struct users_configs *read_configs(const char *abs_config_path) {
 	struct users_configs *configs = NULL;
 	FILE *fp;
 	
-	if((fp = fopen_inf(abs_config_path, "r")))
+	if((fp = fopen_inf(abs_config_path, "r"))) {
 		if((configs = malloc_inf(sizeof(struct users_configs)))) {
 			configs->pdf_viewer = NULL;
 	
@@ -92,10 +90,10 @@ struct users_configs *read_configs(const char *abs_config_path) {
 			 &&	(configs->pdf_viewer = get_line(fp))) 
 				retval = configs;
 		}
-
-	if(fp)
+		
 		if(fclose_inf(fp))
 			retval = NULL;
+	}
 
 	if(!retval && configs)
 		free_users_configs(configs);

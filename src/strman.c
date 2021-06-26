@@ -20,7 +20,7 @@
 static void cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
-static void adjust_val_after_alpha_cmp(char *, char *, unsigned int *, unsigned int);
+static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, unsigned int);
 
 /*
  * Make a small letters copy of str.
@@ -92,6 +92,7 @@ int strsort_alpha(char **unsorted, char **sorted,
 		sorted[i] = unsorted[ret_i];
 		unsorted[ret_i] = NULL;
 	}
+	
 	sorted[i] = NULL;
 	
 	return 0;
@@ -111,17 +112,14 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 	for(i=0, smallest_word_i=0; i<size; i++) {
 		if(array[i] == NULL)
 			continue;
-			
+		
 		if(smallest_word) {
 			if(!(current_word = small_let_copy((const char *) array[i])))
 				break;
-
-			if(alpha_cmp((const char *) smallest_word, (const char *) current_word)) {
-				adjust_val_after_alpha_cmp(smallest_word, current_word, &smallest_word_i, i);
-				//smallest_word = current_word;
-				//smallest_word_i = i;
-				current_word = NULL;
-			}
+			
+			if(alpha_cmp((const char *) smallest_word, (const char *) current_word))
+				adjust_val_after_alpha_cmp(&smallest_word, &current_word, &smallest_word_i, i);
+			
 			else {
 				free(current_word);
 				current_word = NULL;	
@@ -138,7 +136,7 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 		retval = smallest_word_i;
 
 	cleanup(smallest_word, current_word);
-
+	
 	return retval;
 }
 
@@ -147,14 +145,14 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
  * Adjust the passed variables values from get_smallest_word_i()
  * to the right values if alpha_cmp() returns 1.
  */
-static void adjust_val_after_alpha_cmp(char *smallest_word, 
-                                       char *current_word, 
+static void adjust_val_after_alpha_cmp(char **smallest_word, 
+                                       char **current_word, 
                                        unsigned int *smallest_word_i, 
 									   unsigned int current_word_i) {
-	free(smallest_word);
-	smallest_word = current_word;
+	free(*smallest_word);
+	*smallest_word = *current_word;
 	*smallest_word_i = current_word_i;
-	current_word = NULL;
+	*current_word = NULL;
 } 
 
 

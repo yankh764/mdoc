@@ -35,7 +35,9 @@ static void get_doc_path_error(char *, char *);
 static char *get_doc_path_retval(char *, char *);
 static void print_colorful(struct l_list *);
 static void print_no_color(struct l_list *);
-static void save_l_list_obj(struct l_list *, char **, const unsigned int);
+static void save_l_list_obj(struct l_list *, char **);
+static void free_and_null(void **);
+static void reorganize_l_list_alpha(struct l_list *, char *const *);
 
 
 /*
@@ -93,19 +95,19 @@ static struct l_list *get_last_node(struct l_list *ptr) {
 
 
 /*
- * The function will search the passed str sequence in all the 
- * existing documents in the documents directory. If str is NULL
- * it'll save all the founded docs.
+ * The function will search dor the passed str sequence in dir_path
+ * then it will save the founded ones in the linked list. If str is NULL
+ * it'll save all the docs to the linked list.
  */
 struct l_list *search_for_doc(const char *dir_path, const char *str, 
                               bool ignore_case, bool recursive) {
-	/* Note: I tried to find better variables names for doc_list_begin and 
-      doc_list_rec_begin, but didn't find any. So just to make things clear
-      doc_list_begin refers to the beginning of the documents list that is
-      filled by the function, whereas doc_list_rec_begin refers to the begnning
-      of the documents list that is created, filled and returned by the recursion. */
-	struct l_list *doc_list_begin, *doc_list_rec_begin;
+	
 	struct l_list *current_node, *current_node_rec;
+	/* The begnning of the documents list that is 
+	   created, filled and returned by the recursion */
+	struct l_list *doc_list_rec_begin = NULL;
+	/* The beginning of the documents list that is filled by the function */	
+	struct l_list *doc_list_begin = NULL; 
 	struct dirent *entry;
 	struct stat stbuf;
 	char *new_path = NULL;
@@ -113,8 +115,6 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	int ret;
 	DIR *dp;
 	
-	doc_list_begin = doc_list_rec_begin = NULL;
-
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
 			/* Skip current and pervious directory entries */
@@ -142,9 +142,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 				if(prev_error)
 					break;
 			}
-
-			free(new_path);
-			new_path = NULL; /* Mark it as already free */
+			free_and_null((void **) &new_path);
 
 			if(S_ISREG(stbuf.st_mode)) {
 			/* If str is NULL, save every file name to the linked list */
@@ -202,7 +200,6 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
 
 		return doc_list_begin;
 	}
-
 	else if(doc_list_rec_begin)
 		return doc_list_rec_begin;
 	
@@ -213,7 +210,8 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
 /*
  * Function for the cleanup when error occures in search_for_doc().
  */
-static void search_for_doc_error(char *char_ptr, struct l_list *l_list_ptr1, 
+static void search_for_doc_error(char *char_ptr, 
+                                 struct l_list *l_list_ptr1, 
                                  struct l_list *l_list_ptr2) {
 	if(char_ptr)
 		free(char_ptr);	
@@ -295,11 +293,10 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 			}
 			else if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
 				break;
-			
-			free(new_path);
-			new_path = NULL;
+		
+			free_and_null((void **) &new_path);
 		}
-
+	/* Catch errors */
 	if(errno || prev_error)
 		get_doc_path_error(new_path, ret_path);
 
@@ -313,6 +310,13 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 	return get_doc_path_retval(new_path, ret_path);
 }
 
+
+static void free_and_null(void **ptr) {
+	free(*ptr);
+	*ptr = NULL;
+}
+
+
 /*
  * Function for the cleanup when error occures in get_doc_path().
  */
@@ -322,7 +326,7 @@ static void get_doc_path_error(char *char_ptr1, char *char_ptr2) {
 	if(char_ptr2)
 		free(char_ptr2);
 
-	prev_error = true;
+	prev_error = 1;
 }
 
 
@@ -335,7 +339,6 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 
 		return ret_path;
 	}
-
 	else if(new_path)
 		return new_path;
 	
@@ -364,11 +367,10 @@ int sort_docs_alpha(struct l_list *unsorted_l_list) {
 	char *sorted_array[obj_num];
 	int retval;
 
-	save_l_list_obj(unsorted_l_list, unsorted_array, obj_num);
-	if((retval = strsort_alpha(unsorted_array, sorted_array, obj_num)) != -1) {
-		for(int i=0; sorted_array[i]!=NULL; i++)
-			printf("%s\n", sorted_array[i]);
-	}
+	save_l_list_obj(unsorted_l_list, unsorted_array);
+	
+	if((retval = strsort_alpha(unsorted_array, sorted_array, obj_num)) != -1)
+		reorganize_l_list_alpha(unsorted_l_list, sorted_array);
 	
 	return retval;
 }
@@ -377,12 +379,25 @@ int sort_docs_alpha(struct l_list *unsorted_l_list) {
 /*
  * Save every obj address in the linked list to the array of pointers.
  */
-static void save_l_list_obj(struct l_list *ptr, char **array, 
-                            const unsigned int array_size) {
+static void save_l_list_obj(struct l_list *ptr, char **array) {
 	unsigned int i;
 
-	for(i=0; i<array_size; ptr=ptr->next)
+	for(i=0; ptr; ptr=ptr->next)
 		array[i++] = ptr->obj;
-
+	
 	array[i] = NULL;
 }
+
+
+/*
+ * Reorganize the linked list's objects alphabetically.
+ */
+static void reorganize_l_list_alpha(struct l_list *unsorted_l_list, 
+                                    char *const *sorted_array) {
+	struct l_list *ptr = unsorted_l_list;
+	unsigned int i;
+
+	for(i=0; ptr; ptr=ptr->next)
+		ptr->obj = sorted_array[i++];
+}
+
