@@ -347,6 +347,9 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
+/*
+ * Not completed
+ */
 int open_doc(const char *pdf_viewer, const char *doc_path) {
 	char *const x[] = {(char *) pdf_viewer, (char *) doc_path, NULL};
 	int retval;
