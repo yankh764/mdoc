@@ -77,7 +77,7 @@ static void cleanup(char *ptr1, char *ptr2) {
 }
 
 
-/*
+/* NOT COMPLETE
  * Sort the array of pointers alphabetically and save it to sorted.
  */
 int strsort_alpha(char **unsorted, char **sorted, 
@@ -99,7 +99,7 @@ int strsort_alpha(char **unsorted, char **sorted,
 }
 	
 
-/*
+/* NOT COMPLETE
  * Return the index of the word that has letters with a 
  * lowest value in the array of pointers. 
  */
