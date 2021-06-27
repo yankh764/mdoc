@@ -102,19 +102,22 @@ static struct l_list *get_last_node(struct l_list *ptr) {
 struct l_list *search_for_doc(const char *dir_path, const char *str, 
                               bool ignore_case, bool recursive) {
 	
-	struct l_list *current_node, *current_node_rec;
+	struct l_list *current_node_rec, *current_node;;
 	/* The begnning of the documents list that is 
 	   created, filled and returned by the recursion */
-	struct l_list *doc_list_rec_begin = NULL;
+	struct l_list *doc_list_rec_begin;
 	/* The beginning of the documents list that is filled by the function */	
-	struct l_list *doc_list_begin = NULL; 
+	struct l_list *doc_list_begin; 
 	struct dirent *entry;
 	struct stat stbuf;
 	char *new_path = NULL;
 	size_t len;
 	int ret;
 	DIR *dp;
-	
+
+	/* Initialize l_list pointers */
+	doc_list_rec_begin = doc_list_begin = current_node_rec = current_node = NULL;
+
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
 			/* Skip current and pervious directory entries */
@@ -347,9 +350,6 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-/*
- * Not completed
- */
 int open_doc(const char *pdf_viewer, const char *doc_path) {
 	char *const x[] = {(char *) pdf_viewer, (char *) doc_path, NULL};
 	int retval;
@@ -366,13 +366,13 @@ int open_doc(const char *pdf_viewer, const char *doc_path) {
  */
 int sort_docs_alpha(struct l_list *unsorted_l_list) {
 	const unsigned int obj_num = count_l_list_nodes(unsorted_l_list);	
-	char *unsorted_array[obj_num];
-	char *sorted_array[obj_num];
+	char *unsorted_array[obj_num+1];
+	char *sorted_array[obj_num+1];
 	int retval;
 
 	save_l_list_obj(unsorted_l_list, unsorted_array);
 	
-	if((retval = strsort_alpha(unsorted_array, sorted_array, obj_num)) != -1)
+	if(!(retval = strsort_alpha(unsorted_array, sorted_array, obj_num)))
 		reorganize_l_list_alpha(unsorted_l_list, sorted_array);
 	
 	return retval;

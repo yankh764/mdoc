@@ -1,5 +1,27 @@
-test:
-	gcc -Wno-maybe-uninitialized -march=native -O2 -fstack-protector -Wextra -Wall -I./include/ ./src/*.c test.c -o a.out
+CC = gcc
+CFLAGS = -march=native -O2 -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
 
-test_all:
-	gcc -march=native -O2 -fstack-protector -Werror -Wextra -Wall -I./include/ ./src/*.c test.c -o a.out
+BIN ?= mdoc
+
+INCLUDE ?= include/
+OBJDIR ?= build/
+SRCDIR ?= src/
+
+
+build:
+	mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -c $(SRCDIR)informative.c -o $(OBJDIR)informative.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)strman.c -o $(OBJDIR)strman.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)config.c -o $(OBJDIR)config.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)input.c -o $(OBJDIR)input.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)exec.c -o $(OBJDIR)exec.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)mdoc.c -o $(OBJDIR)mdoc.o
+
+
+.PHONY: test clean
+
+test:	
+	$(CC) $(CFLAGS) $(OBJDIR)* test.c
+
+clean:
+	rm -rf $(OBJDIR)

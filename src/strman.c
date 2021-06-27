@@ -21,6 +21,8 @@ static void cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
 static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, unsigned int);
+static void free_and_null(void **);
+
 
 /*
  * Make a small letters copy of str.
@@ -77,7 +79,7 @@ static void cleanup(char *ptr1, char *ptr2) {
 }
 
 
-/* NOT COMPLETE
+/* 
  * Sort the array of pointers alphabetically and save it to sorted.
  */
 int strsort_alpha(char **unsorted, char **sorted, 
@@ -92,14 +94,13 @@ int strsort_alpha(char **unsorted, char **sorted,
 		sorted[i] = unsorted[ret_i];
 		unsorted[ret_i] = NULL;
 	}
-	
 	sorted[i] = NULL;
 	
 	return 0;
 }
 	
 
-/* NOT COMPLETE
+/* 
  * Return the index of the word that has letters with a 
  * lowest value in the array of pointers. 
  */
@@ -116,14 +117,14 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 		if(smallest_word) {
 			if(!(current_word = small_let_copy((const char *) array[i])))
 				break;
-			
-			if(alpha_cmp((const char *) smallest_word, (const char *) current_word))
+printf("%s\n%s\n", smallest_word, current_word);	
+			if(alpha_cmp((const char *) smallest_word, (const char *) current_word)) {
 				adjust_val_after_alpha_cmp(&smallest_word, &current_word, &smallest_word_i, i);
-			
-			else {
-				free(current_word);
-				current_word = NULL;	
+printf("1\n");
 			}
+			
+			else 
+				free_and_null((void **) &current_word);
 		}
 		else {
 			if(!(smallest_word = small_let_copy((const char *) array[i])))
@@ -154,6 +155,12 @@ static void adjust_val_after_alpha_cmp(char **smallest_word,
 	*smallest_word_i = current_word_i;
 	*current_word = NULL;
 } 
+
+
+static void free_and_null(void **ptr) {
+	free(*ptr);
+	*ptr = NULL;
+}
 
 
 /*
