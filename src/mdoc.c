@@ -17,8 +17,8 @@
 #include "informative.h"
 #include "mdoc.h"
 
-#define ANSI_COLOR_RED   "\e[0;31m"
-#define ANSI_COLOR_RESET "\e[0m"
+#define ANSI_COLOR_RED   "\x1b[31m"
+#define ANSI_COLOR_RESET "\x1b[0m"
 
 
 /* To indicate if an previous error occoured in a functions
@@ -229,8 +229,6 @@ static void search_for_doc_error(char *char_ptr,
 
 void display_docs(struct l_list *ptr, bool color_status) {
 	if(ptr) {
-		printf("These are the documents that were found:\n\n");
-
 		if(color_status)
 			print_colorful(ptr);
 		else
@@ -241,7 +239,7 @@ void display_docs(struct l_list *ptr, bool color_status) {
 
 static void print_colorful(struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
-		printf("<*>" ANSI_COLOR_RED " %s" ANSI_COLOR_RESET "\n", ptr->obj);
+		printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
 
 	printf("\n");
 }
@@ -347,6 +345,40 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 	
 	else 
 		return NULL;
+}
+
+
+char *const *get_open_argv(struct users_configs *configs) {
+/*	char *const *retval = NULL;
+	char *const *argv;
+	unsigned int i;
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+	argc = argc + count_words((const char *) configs->add_args);
+
+	for(i=0; i<argc; i++) {
+		if(!((argv+i) = malloc_inf(sizeof(char *))))
+			break;
+
+		if(i == 0)
+			argv[i] = configs->pdf_viewer;
+		
+		else if(i == 1)
+			argv[i] = configs->docs_dir_path;
+	}
+	return retval;*/
 }
 
 

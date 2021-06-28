@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -march=native -O2 -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
+CFLAGS = -march=native -O2 -fstack-protector-strong -Wextra -Wall -I $(INCLUDE)
 
 BIN ?= mdoc
 
@@ -18,10 +18,10 @@ build:
 	$(CC) $(CFLAGS) -c $(SRCDIR)mdoc.c -o $(OBJDIR)mdoc.o
 
 
-.PHONY: test clean
+.PHONY: clean test
 
-test:	
-	$(CC) $(CFLAGS) $(OBJDIR)* test.c
+test: 
+	$(CC) $(CFLAGS) $(SRCDIR)*.c test.c
 
 clean:
 	rm -rf $(OBJDIR)

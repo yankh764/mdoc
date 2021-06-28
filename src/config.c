@@ -8,6 +8,7 @@
 */
 
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include "informative.h"
 #include "input.h"
@@ -28,7 +29,7 @@ static struct users_configs *input_configs() {
     struct users_configs *input;
 
 	if((input = malloc_inf(sizeof(struct users_configs)))) {
-		input->docs_dir_path = input->pdf_viewer = NULL;
+		input->docs_dir_path = input->pdf_viewer = input->add_args = NULL;
 	
 		printf("Please enter your documents directory absolute path: ");
 		if(!(input->docs_dir_path = get_line(stdin))) 
@@ -36,6 +37,11 @@ static struct users_configs *input_configs() {
 
 		printf("\nPlease enter your pdf's viewer absolute path: ");
 		if(!(input->pdf_viewer = get_line(stdin)))
+			goto Out;
+		
+		printf("\nPlease enter additional arguments for your pdf viewer (optional): ");
+		/* Only fail if error detected since it's optional secition */
+		if(!(input->add_args = get_line(stdin)) && errno)
 			goto Out;
 
 		retval = input;
@@ -61,15 +67,16 @@ int generate_config(const char *abs_config_path) {
 	if((fp = fopen_inf(abs_config_path, "w"))) {
 		if((configs = input_configs())) {
 			
-			fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
+			fprintf(fp, "%s\n%s\n%s\n", configs->docs_dir_path, 
+			                            configs->pdf_viewer, configs->add_args);
 			printf("\nYour configurations were generated succesfully.\n");
 			
 			retval = 0;
 		}
-		free_users_configs(configs); 
-		
 		if(fclose_inf(fp))
 			retval = -1;
+		
+		free_users_configs(configs); 
 	}	
 
 	return retval;
@@ -90,7 +97,6 @@ struct users_configs *read_configs(const char *abs_config_path) {
 			 &&	(configs->pdf_viewer = get_line(fp))) 
 				retval = configs;
 		}
-		
 		if(fclose_inf(fp))
 			retval = NULL;
 	}
@@ -107,6 +113,8 @@ void free_users_configs(struct users_configs *ptr) {
 		free(ptr->pdf_viewer);
 	if(ptr->docs_dir_path)
 		free(ptr->docs_dir_path);
+	if(ptr->add_args)
+		free(ptr->add_args);
 	
 	free(ptr);
 }

@@ -117,11 +117,9 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 		if(smallest_word) {
 			if(!(current_word = small_let_copy((const char *) array[i])))
 				break;
-printf("%s\n%s\n", smallest_word, current_word);	
-			if(alpha_cmp((const char *) smallest_word, (const char *) current_word)) {
+			
+			if(alpha_cmp((const char *) smallest_word, (const char *) current_word))
 				adjust_val_after_alpha_cmp(&smallest_word, &current_word, &smallest_word_i, i);
-printf("1\n");
-			}
 			
 			else 
 				free_and_null((void **) &current_word);
@@ -171,18 +169,52 @@ static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
 	size_t assumed_len = strlen(assumed_smaller);
 	size_t check_len = strlen(word_to_check);
 	size_t min_len, i;
-	
+
 	min_len = (assumed_len > check_len) ? assumed_len : check_len; 
 	
-	for(i=0; i<min_len; i++)
+	for(i=0; i<min_len; i++) {
 	/* If both chars are alphabetical characters check 
 	   their values.                                   */
-		if(isalpha(word_to_check[i]) 
-		 && isalpha(assumed_smaller[i]))
+		if(isalpha(word_to_check[i])
+		 && isalpha(assumed_smaller[i])) {
 			if(word_to_check[i] < assumed_smaller[i])
 				return 1;
+
+			else if(assumed_smaller[i] < word_to_check[i])
+				return 0;
+		}
+		/* If assumed_smaller[i] isn't alphabetical char whereas word_to_check[i] is */
+		else if(!isalpha(assumed_smaller[i])
+		 && isalpha(word_to_check[i]))
+			return 1;
+
+		/* If word_to_check[i] isn't alphabetical char whereas assumed_smaller[i] is */
+		else if(!isalpha(word_to_check[i])
+		 && isalpha(assumed_smaller[i]))
+			return 0;
+	}
 	
 	/* If haven't returned yet, return 1 if  
 	   check_len > assumed_len, otherwise return 0 */	
 	return (check_len > assumed_len); 
+}
+
+
+unsigned int count_words(const char *line) {
+	unsigned int words;
+	unsigned int i;
+	bool inside = 0;
+
+	for(i=0, words=0; line[i]!='\n' || line[i]!='\0'; i++) {
+		if(isspace(line[i]))
+			inside = 0;
+		else {
+ 			if(!inside)
+				words++;
+			
+			inside = 1;
+		}
+	}
+	
+	return words;
 }

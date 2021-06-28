@@ -4,6 +4,7 @@
 struct users_configs {
 	char *docs_dir_path; 
 	char *pdf_viewer;
+	char *add_args; /* Additional arguments */
 };
 
 int generate_config(const char *);
