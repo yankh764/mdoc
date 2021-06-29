@@ -14,7 +14,6 @@
 #include "exec.h"
 #include "input.h"
 #include "strman.h"
-#include "informative.h"
 #include "mdoc.h"
 
 #define ANSI_COLOR_RED   "\x1b[31m"
@@ -38,6 +37,7 @@ static void print_no_color(struct l_list *);
 static void save_l_list_obj(struct l_list *, char **);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char *const *);
+static void *alloc_l_list();
 
 
 /*
@@ -48,7 +48,7 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
-	if((ptr = malloc_inf(sizeof(struct l_list)))
+	if((ptr = alloc_l_list()) 
 	 && (ptr->obj = (char *) malloc_inf(obj_size)))
 		retval = ptr;
 
@@ -56,6 +56,12 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 		free(ptr);
 
 	return retval;
+}
+
+
+static void *alloc_l_list() 
+{
+	return malloc_inf(sizeof(struct l_list));
 }
 
 
@@ -240,16 +246,12 @@ void display_docs(struct l_list *ptr, bool color_status) {
 static void print_colorful(struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
 		printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
-
-	printf("\n");
 }
 
 
 static void print_no_color(struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
 		printf("<*> %s\n", ptr->obj);
-	
-	printf("\n");
 }
 
 
@@ -348,8 +350,8 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-char *const *get_open_argv(struct users_configs *configs) {
-/*	char *const *retval = NULL;
+char *const *get_open_doc_argv(struct users_configs *configs) {
+	/*char *const *retval = NULL;
 	char *const *argv;
 	unsigned int i;
 

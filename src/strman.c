@@ -20,7 +20,7 @@
 static void cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
-static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, unsigned int);
+static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, const unsigned int);
 static void free_and_null(void **);
 
 
@@ -147,7 +147,7 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 static void adjust_val_after_alpha_cmp(char **smallest_word, 
                                        char **current_word, 
                                        unsigned int *smallest_word_i, 
-									   unsigned int current_word_i) {
+									   const unsigned int current_word_i) {
 	free(*smallest_word);
 	*smallest_word = *current_word;
 	*smallest_word_i = current_word_i;
@@ -205,7 +205,7 @@ unsigned int count_words(const char *line) {
 	unsigned int i;
 	bool inside = 0;
 
-	for(i=0, words=0; line[i]!='\n' || line[i]!='\0'; i++) {
+	for(i=0, words=0; line[i]!='\n' && line[i]!='\0'; i++) {
 		if(isspace(line[i]))
 			inside = 0;
 		else {

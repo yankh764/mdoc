@@ -2,6 +2,7 @@
 #define MDOC_H
 
 #include <stdbool.h>
+#include "informative.h"
 #include "config.h"
 
 /* To indicate if an previous error eccoured in a functions
@@ -18,7 +19,7 @@ struct l_list *search_for_doc(const char *, const char *, bool, bool);
 void display_docs(struct l_list *, bool);
 unsigned int count_l_list_nodes(struct l_list *);
 char *get_doc_path(const char *, const char *, bool);
-char *const *get_open_argv(struct users_configs *);
+char *const *get_open_doc_argv(struct users_configs *);
 int open_doc(const char *, const char *);
 int sort_docs_alpha(struct l_list *);
 
