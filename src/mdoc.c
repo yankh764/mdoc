@@ -38,6 +38,8 @@ static void save_l_list_obj(struct l_list *, char **);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char *const *);
 static void *alloc_l_list();
+static char **alloc_array_of_ptr(unsigned int);
+static int get_add_args(char **, char *, unsigned int *);
 
 
 /*
@@ -62,6 +64,15 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 static void *alloc_l_list() 
 {
 	return malloc_inf(sizeof(struct l_list));
+}
+
+
+/*
+ * Allocate array of char pointers.
+ */
+static char **alloc_array_of_ptr(unsigned int items) 
+{
+	return (char **) malloc_inf(sizeof(char *) * items);
 }
 
 
@@ -209,6 +220,7 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
 
 		return doc_list_begin;
 	}
+
 	else if(doc_list_rec_begin)
 		return doc_list_rec_begin;
 	
@@ -234,12 +246,12 @@ static void search_for_doc_error(char *char_ptr,
 
 
 void display_docs(struct l_list *ptr, bool color_status) {
-	if(ptr) {
 		if(color_status)
 			print_colorful(ptr);
+
 		else
 			print_no_color(ptr);
-	}
+
 }
 
 
@@ -350,45 +362,59 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-char *const *get_open_doc_argv(struct users_configs *configs) {
-	/*char *const *retval = NULL;
-	char *const *argv;
-	unsigned int i;
+char **get_open_doc_argv(char *pdf_viewer, char *doc_path, char *add_args) {
+	char **retval = NULL;
+	unsigned int i = 0;
+	char **argv;
 
+	if(!(argv = alloc_array_of_ptr(i+1)))
+		goto Out;
 
+	argv[i++] = (char *) pdf_viewer;
 	
+	if(add_args)
+		if(get_add_args(argv, add_args, &i))
+			goto Out;
 
+	//printf("%d\n", i);
+	argv[i++] = (char *) doc_path;
 
+	if(!realloc_inf(argv, sizeof(char *) * i+1))
+		goto Out;
 
+	argv[i] = NULL;
+	retval = argv;
 
+	Out:
+		if(!retval && argv)
+			free(argv);
 
-
-
-
-
-
-
-	argc = argc + count_words((const char *) configs->add_args);
-
-	for(i=0; i<argc; i++) {
-		if(!((argv+i) = malloc_inf(sizeof(char *))))
-			break;
-
-		if(i == 0)
-			argv[i] = configs->pdf_viewer;
-		
-		else if(i == 1)
-			argv[i] = configs->docs_dir_path;
-	}
-	return retval;*/
+		return retval;
 }
 
 
-int open_doc(const char *pdf_viewer, const char *doc_path) {
-	char *const x[] = {(char *) pdf_viewer, (char *) doc_path, NULL};
+static int get_add_args(char **argv, char *add_args, unsigned int *i) {
+	unsigned int ret;
+	int retval = 0;
+
+	for(; (ret = space_to_null(add_args)); *i+=1, add_args+=ret) {
+		if(!realloc_inf(argv, sizeof(char *) * *i+1))
+			break;
+		
+		argv[*i] = add_args;
+	}
+	
+	if(errno)
+		retval = -1;
+	
+	return retval;
+}
+
+
+int open_doc(char *const *argv, const char *doc_path) {
 	int retval;
 
-	if(!(retval = execvp_process(pdf_viewer, x)))
+	if(!(retval = execvp_process(argv[0], argv)))
 		printf("Opening: %s\n", doc_path);
 	
 	return retval;

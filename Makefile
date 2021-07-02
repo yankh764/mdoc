@@ -13,9 +13,9 @@ build:
 	$(CC) $(CFLAGS) -c $(SRCDIR)/informative.c -o $(OBJDIR)/informative.o
 	$(CC) $(CFLAGS) -c $(SRCDIR)/strman.c -o $(OBJDIR)/strman.o
 	$(CC) $(CFLAGS) -c $(SRCDIR)/config.c -o $(OBJDIR)/config.o
+	$(CC) $(CFLAGS) -c $(SRCDIR)/types.c -o $(OBJDIR)/types.o
 	$(CC) $(CFLAGS) -c $(SRCDIR)/input.c -o $(OBJDIR)/input.o
 	$(CC) $(CFLAGS) -c $(SRCDIR)/exec.c -o $(OBJDIR)/exec.o
-	$(CC) $(CFLAGS) -c $(SRCDIR)/mdoc.c -o $(OBJDIR)/mdoc.o
 
 
 .PHONY: clean test

@@ -109,7 +109,7 @@ struct users_configs *read_configs(const char *abs_config_path) {
 			configs->docs_dir_path = configs->pdf_viewer = configs->add_args = NULL;
 
 			if((configs->docs_dir_path = get_line(fp)) 
-			 &&	(configs->pdf_viewer = get_line(fp))
+			 && (configs->pdf_viewer = get_line(fp))
 			 && ((configs->add_args = get_line(fp))
 			 || !errno))
 				retval = configs;

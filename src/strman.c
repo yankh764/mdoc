@@ -218,3 +218,19 @@ unsigned int count_words(const char *line) {
 	
 	return words;
 }
+
+
+/*
+ * Replace each space (white character) with a null byte.
+ */
+unsigned int space_to_null(char *text) {
+	unsigned int i;
+
+	for(i=0; text[i]!='\0'; i++)
+		if(isspace(text[i])) {
+			text[i++] = '\0';
+			break;
+		}
+			
+	return i;
+}
