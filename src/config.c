@@ -17,7 +17,7 @@
 
 /* Static Functions Prototype */
 static struct users_configs *input_configs();
-static void write_configs(FILE *, struct users_configs *);
+static void write_configs(FILE *, const struct users_configs *);
 static void *alloc_users_configs();
 
 
@@ -81,6 +81,9 @@ int generate_config(const char *abs_config_path) {
 			retval = 0;
 		}
 		
+		else
+			retval = -1;
+		
 		if(fclose_inf(fp))
 			retval = -1;
 	}	
@@ -89,7 +92,7 @@ int generate_config(const char *abs_config_path) {
 }
 
 
-static void write_configs(FILE *fp, struct users_configs *configs) {
+static void write_configs(FILE *fp, const struct users_configs *configs) {
 	fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
 	
 	if(configs->add_args)
@@ -114,7 +117,9 @@ struct users_configs *read_configs(const char *abs_config_path) {
 			 || !errno))
 				retval = configs;
 		}
-		
+		else
+			retval = NULL;
+
 		if(fclose_inf(fp))
 			retval = NULL;
 	}

@@ -25,12 +25,11 @@
 bool prev_error;
 
 /* Static Functions Prototype */
-static struct l_list *alloc_l_list_obj(size_t);
+static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(struct l_list *);
-static void search_for_doc_error(char *, struct l_list *, struct l_list *);
-static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  struct l_list *);
-static void get_doc_path_error(char *, char *);
+static void search_for_doc_error(char *, struct l_list **, struct l_list **);
+static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
 static void print_colorful(struct l_list *);
 static void print_no_color(struct l_list *);
@@ -38,20 +37,21 @@ static void save_l_list_obj(struct l_list *, char **);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char *const *);
 static void *alloc_l_list();
-static char **alloc_array_of_ptr(unsigned int);
-static int get_add_args(char **, char *, unsigned int *);
+static struct l_list *search_for_doc_retval(struct l_list *, 
+                                            struct l_list *,  
+                                            struct l_list *);
 
 
 /*
  * Return a pointer to allocated l_list structure that also 
  * has an allocated obj to it with the size of obj_size.
  */
-static struct l_list *alloc_l_list_obj(size_t obj_size) {
+static struct l_list *alloc_l_list_obj(const size_t obj_size) {
 	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
 	if((ptr = alloc_l_list()) 
-	 && (ptr->obj = (char *) malloc_inf(obj_size)))
+	 && (ptr->obj = malloc_inf(sizeof(char) * obj_size)))
 		retval = ptr;
 
 	if(!retval && ptr)
@@ -64,15 +64,6 @@ static struct l_list *alloc_l_list_obj(size_t obj_size) {
 static void *alloc_l_list() 
 {
 	return malloc_inf(sizeof(struct l_list));
-}
-
-
-/*
- * Allocate array of char pointers.
- */
-static char **alloc_array_of_ptr(unsigned int items) 
-{
-	return (char **) malloc_inf(sizeof(char *) * items);
 }
 
 
@@ -94,7 +85,7 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
     const size_t path_len = strlen(dir_path) + strlen(entry_name) + 2;
     char *entry_path;
 
-    if((entry_path = (char *) malloc_inf(path_len)))
+    if((entry_path = malloc_inf(sizeof(char) * path_len)))
         snprintf(entry_path, path_len, "%s/%s", dir_path, entry_name);
 
     return entry_path;
@@ -102,9 +93,9 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
 
 
 static struct l_list *get_last_node(struct l_list *ptr) {
-	struct l_list *prev = NULL;
+	struct l_list *prev;
 
-	for(; ptr; ptr=ptr->next)
+	for(prev=NULL; ptr; ptr=ptr->next)
 		prev = ptr;
 
 	return prev;
@@ -117,8 +108,7 @@ static struct l_list *get_last_node(struct l_list *ptr) {
  * it'll save all the docs to the linked list.
  */
 struct l_list *search_for_doc(const char *dir_path, const char *str, 
-                              bool ignore_case, bool recursive) {
-	
+                              const bool ignore_case, const bool recursive) {
 	struct l_list *current_node_rec, *current_node;;
 	/* The begnning of the documents list that is 
 	   created, filled and returned by the recursion */
@@ -138,7 +128,8 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
 			/* Skip current and pervious directory entries */
-			if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			if(strcmp(entry->d_name, ".") == 0 
+			 || strcmp(entry->d_name, "..") == 0)
 				continue;
 			
 			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
@@ -150,13 +141,13 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			if(S_ISDIR(stbuf.st_mode) && recursive) {
 				/* If still not initialized try to initialize it */
 				if(!doc_list_rec_begin) { 
-					if((doc_list_rec_begin = search_for_doc((const char *) new_path, 
-					                                        str, ignore_case, recursive)))
+					if((doc_list_rec_begin = search_for_doc(new_path, str, 
+					                                        ignore_case, recursive)))
 						current_node_rec = get_last_node(doc_list_rec_begin);
 				}	
 				else
-					if((current_node_rec->next = search_for_doc((const char *) new_path, 
-					                                            str, ignore_case, recursive)))
+					if((current_node_rec->next = search_for_doc(new_path, str, 
+					                                            ignore_case, recursive)))
 						current_node_rec = get_last_node(current_node_rec->next);
 		
 				if(prev_error)
@@ -195,18 +186,14 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 				current_node->next = NULL;
 			}
 		}
-	
 	if(errno || prev_error)
-		search_for_doc_error(new_path, doc_list_begin, doc_list_rec_begin);
+		search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
 
 	if(dp)
 		/* If error occured while closing dp and no cleanup have been done already */
 		if(closedir_inf(dp) && !prev_error) 
-			search_for_doc_error(new_path, doc_list_begin, doc_list_rec_begin);
+			search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
 	
-	if(prev_error)
-		doc_list_begin = doc_list_rec_begin = NULL;
-
 	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
 }
 
@@ -220,7 +207,6 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
 
 		return doc_list_begin;
 	}
-
 	else if(doc_list_rec_begin)
 		return doc_list_rec_begin;
 	
@@ -232,20 +218,21 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
  * Function for the cleanup when error occures in search_for_doc().
  */
 static void search_for_doc_error(char *char_ptr, 
-                                 struct l_list *l_list_ptr1, 
-                                 struct l_list *l_list_ptr2) {
+                                 struct l_list **l_list_ptr1, 
+                                 struct l_list **l_list_ptr2) {
 	if(char_ptr)
 		free(char_ptr);	
-	if(l_list_ptr1)
-		free_l_list(l_list_ptr1);
-	if(l_list_ptr2)
-		free_l_list(l_list_ptr2);
+	if(*l_list_ptr1)
+		free_l_list(*l_list_ptr1);
+	if(*l_list_ptr2)
+		free_l_list(*l_list_ptr2);
 
+	*l_list_ptr1 = *l_list_ptr2 = NULL;
 	prev_error = true;
 }
 
 
-void display_docs(struct l_list *ptr, bool color_status) {
+void display_docs(struct l_list *ptr, const bool color_status) {
 		if(color_status)
 			print_colorful(ptr);
 
@@ -290,7 +277,8 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 	
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
-			if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			if(strcmp(entry->d_name, ".") == 0 
+			 || strcmp(entry->d_name, "..") == 0)
 				continue;
 
 			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
@@ -300,27 +288,25 @@ char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursi
 				break;
 			
 			if(S_ISDIR(stbuf.st_mode) && recursive) {
-				if((ret_path = get_doc_path((const char *) new_path, full_doc_name, recursive)))
+				if((ret_path = get_doc_path(new_path, full_doc_name, recursive)))
 					break;
 				
 				else if(prev_error)
 					break;
 			}
-			else if(S_ISREG(stbuf.st_mode) && strstr(new_path, full_doc_name))
+			else if(S_ISREG(stbuf.st_mode) 
+			 && strstr(new_path, full_doc_name))
 				break;
 		
 			free_and_null((void **) &new_path);
 		}
 	/* Catch errors */
 	if(errno || prev_error)
-		get_doc_path_error(new_path, ret_path);
+		get_doc_path_error(&new_path, &ret_path);
 
 	if(dp)
 		if(closedir_inf(dp) && !prev_error)
-			get_doc_path_error(new_path, ret_path);
-
-	if(prev_error)
-		new_path = ret_path = NULL;
+			get_doc_path_error(&new_path, &ret_path);
 
 	return get_doc_path_retval(new_path, ret_path);
 }
@@ -335,11 +321,11 @@ static void free_and_null(void **ptr) {
 /*
  * Function for the cleanup when error occures in get_doc_path().
  */
-static void get_doc_path_error(char *char_ptr1, char *char_ptr2) {
-	if(char_ptr1)
-		free(char_ptr1);
-	if(char_ptr2)
-		free(char_ptr2);
+static void get_doc_path_error(char **char_ptr1, char **char_ptr2) {
+	if(*char_ptr1)
+		free_and_null((void **) char_ptr1);
+	if(*char_ptr2)
+		free_and_null((void **) char_ptr2);
 
 	prev_error = 1;
 }
@@ -362,52 +348,19 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-char **get_open_doc_argv(char *pdf_viewer, char *doc_path, char *add_args) {
-	char **retval = NULL;
+void prep_open_doc_argv(char **argv, char *pdf_viewer, 
+                        char *doc_path, char *add_args) {
 	unsigned int i = 0;
-	char **argv;
-
-	if(!(argv = alloc_array_of_ptr(i+1)))
-		goto Out;
-
-	argv[i++] = (char *) pdf_viewer;
-	
-	if(add_args)
-		if(get_add_args(argv, add_args, &i))
-			goto Out;
-
-	//printf("%d\n", i);
-	argv[i++] = (char *) doc_path;
-
-	if(!realloc_inf(argv, sizeof(char *) * i+1))
-		goto Out;
-
-	argv[i] = NULL;
-	retval = argv;
-
-	Out:
-		if(!retval && argv)
-			free(argv);
-
-		return retval;
-}
-
-
-static int get_add_args(char **argv, char *add_args, unsigned int *i) {
 	unsigned int ret;
-	int retval = 0;
 
-	for(; (ret = space_to_null(add_args)); *i+=1, add_args+=ret) {
-		if(!realloc_inf(argv, sizeof(char *) * *i+1))
-			break;
-		
-		argv[*i] = add_args;
-	}
+	argv[i++] = pdf_viewer;
+
+	if(add_args)
+		for(; (ret = space_to_null(add_args)); add_args+=ret)
+			argv[i++] = add_args;
 	
-	if(errno)
-		retval = -1;
-	
-	return retval;
+	argv[i++] = doc_path;
+	argv[i] = NULL;
 }
 
 

@@ -32,7 +32,7 @@ char *small_let_copy(const char *str) {
 	unsigned int i;
 	char *str_small; /* Small letter copy of str */
 
-	if((str_small = (char *) malloc_inf(len))) {
+	if((str_small = malloc_inf(sizeof(char) * len))) {
 		for(i=0; str[i]!='\0'; i++) {
 			if(isupper(str[i]))
 				str_small[i] = tolower(str[i]);
@@ -64,7 +64,6 @@ int strstr_i(const char *haystack, const char *needle) {
 		else 
 			retval = 0; 
 	}
-	
 	cleanup(haystack_small, needle_small);
 
 	return retval;
@@ -115,17 +114,17 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 			continue;
 		
 		if(smallest_word) {
-			if(!(current_word = small_let_copy((const char *) array[i])))
+			if(!(current_word = small_let_copy(array[i])))
 				break;
 			
-			if(alpha_cmp((const char *) smallest_word, (const char *) current_word))
+			if(alpha_cmp(smallest_word, current_word))
 				adjust_val_after_alpha_cmp(&smallest_word, &current_word, &smallest_word_i, i);
 			
 			else 
 				free_and_null((void **) &current_word);
 		}
 		else {
-			if(!(smallest_word = small_let_copy((const char *) array[i])))
+			if(!(smallest_word = small_let_copy(array[i])))
 				break;
 			
 			smallest_word_i = i;
@@ -170,7 +169,7 @@ static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
 	size_t check_len = strlen(word_to_check);
 	size_t min_len, i;
 
-	min_len = (assumed_len > check_len) ? assumed_len : check_len; 
+	min_len = (assumed_len < check_len) ? assumed_len : check_len; 
 	
 	for(i=0; i<min_len; i++) {
 	/* If both chars are alphabetical characters check 
@@ -195,8 +194,8 @@ static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
 	}
 	
 	/* If haven't returned yet, return 1 if  
-	   check_len > assumed_len, otherwise return 0 */	
-	return (check_len > assumed_len); 
+	   check_len < assumed_len, otherwise return 0 */	
+	return (check_len < assumed_len); 
 }
 
 

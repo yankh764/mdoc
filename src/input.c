@@ -26,18 +26,17 @@ char *get_line(FILE *stream) {
 		if(c == '\n' || c == EOF)
 			break;
 		
-		if(!(line = (char *) realloc_inf(line, i+1)))
+		if(!(line = realloc_inf(line, sizeof(char) * (i+1))))
 			break;
+		
 		/* Save the address of line in case realloc_inf() overwrote it with NULL, 
 		   so cleanup can be done.                                               */
-		if(!line_address)
-			line_address = line;
-		
+		line_address = line;
 		line[i] = c;
 	}	
 
 	if(line) 
-		if((line = (char *) realloc_inf(line, i+1)))	
+		if((line = realloc_inf(line, sizeof(char *) * (i+1))))	
 			line[i] = '\0';	
 	
 	retval = line;

@@ -160,3 +160,14 @@ int execvp_inf(const char *file, char *const *argv) {
 
 	return retval;
 }
+
+
+void *reallocarray_inf(void *ptr, size_t nmemb, size_t size) {
+	void *retval;
+
+	if(!(retval = reallocarray(ptr, nmemb, size)))
+		fprintf(stderr, "%s: can't allocate memory: %s\n", 
+				prog_name_inf, strerror(errno));
+
+	return retval;
+}

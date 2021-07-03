@@ -14,10 +14,10 @@ struct l_list {
 	struct l_list *next;
 };
 
-struct l_list *search_for_doc(const char *, const char *, bool, bool);
-void display_docs(struct l_list *, bool);
+struct l_list *search_for_doc(const char *, const char *, const bool, const bool);
+void display_docs(struct l_list *, const bool);
 char *get_doc_path(const char *, const char *, bool);
-char **get_open_doc_argv(char *, char *, char *);
+void prep_open_doc_argv(char **, char *, char *, char *);
 int open_doc(char *const *, const char *);
 int sort_docs_alpha(struct l_list *);
 void free_l_list(struct l_list *);
