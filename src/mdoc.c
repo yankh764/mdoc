@@ -17,6 +17,7 @@
 #include "mdoc.h"
 
 #define ANSI_COLOR_RED   "\x1b[31m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
 
@@ -267,7 +268,9 @@ unsigned int count_l_list_nodes(struct l_list *ptr) {
 /*
  * This function will be used only when count_l_list_nodes() returns 1.
  */
-char *get_doc_path(const char *dir_path, const char *full_doc_name, bool recursive) {
+char *get_doc_path(const char *dir_path, 
+                   const char *full_doc_name, 
+                   const bool recursive) {
 	char *new_path, *ret_path; /* ret_path is the returned path from the recursion */
 	struct dirent *entry;
 	struct stat stbuf;
@@ -364,11 +367,15 @@ void prep_open_doc_argv(char **argv, char *pdf_viewer,
 }
 
 
-int open_doc(char *const *argv, const char *doc_path) {
+int open_doc(char *const *argv, const char *doc_path, const bool colorful) {
 	int retval;
 
-	if(!(retval = execvp_process(argv[0], argv)))
-		printf("Opening: %s\n", doc_path);
+	if(!(retval = execvp_process(argv[0], argv))) {
+		if(colorful)
+			printf(ANSI_COLOR_YELLOW "Opening:" ANSI_COLOR_RESET " %s\n", doc_path);
+		else 
+			printf("Opening: %s\n", doc_path);
+	}
 	
 	return retval;
 }
@@ -417,3 +424,37 @@ static void reorganize_l_list_alpha(struct l_list *unsorted_l_list,
 		ptr->obj = sorted_array[i++];
 }
 
+
+void reverse_l_list_obj(struct l_list *ptr) {
+	const unsigned int obj_num = count_l_list_nodes(ptr);
+	char *objs_array[obj_num+1];
+	int i;
+
+	save_l_list_obj(ptr, objs_array);
+	
+	for(i=obj_num-1; i>-1; ptr=ptr->next)
+		ptr->obj = objs_array[i--];
+}
+
+
+void help(const char *name) {
+	printf("Usage: %s <options> [argument]\n", name);
+	printf("A command-line tool for managing your documents and easing your life.");
+	
+	printf("\n\n");
+	
+	printf("Available options:\n");
+	printf(
+	       " -h \t\t Display this help message.\n"
+		   " -g \t\t Generate new configurations file.\n"
+		   " -s \t\t Sort the founded documents alphabetically.\n"
+		   " -r \t\t Reverse the order of the founded documents.\n"
+		   " -a \t\t Include all documents.\n"
+	       " -i \t\t Ignore case distinctions while searching for the documents.\n"
+		   " -c \t\t Count the existing documents with the passed string sequence.\n"
+		   " -l \t\t List the existing documents with the passed string sequence.\n"
+		   " -o \t\t Open the founded document with the passed string sequence.\n"
+		   " -R \t\t Disable recursive searching for the documents.\n"
+		   " -C \t\t Disable colorful output.\n"
+	      );
+}

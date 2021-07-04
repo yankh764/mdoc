@@ -1,27 +1,33 @@
 CC = gcc
-CFLAGS = -march=native -O2 -fstack-protector-strong -Wextra -Wall -I $(INCLUDE)
+CFLAGS = -O2 -march=native -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
 
 BIN ?= mdoc
-DST = /usr/local/bin/$(BIN)
+DST ?= /usr/local/bin/$(BIN)
 
 INCLUDE ?= include/
-OBJDIR ?= build
-SRCDIR ?= src
+OBJDIR ?= ./build
+SRCDIR ?= ./src
+
+SRCS := $(shell find $(SRCDIR) -iname "*.c")
+OBJS := $(SRCS:%=$(OBJDIR)/%.o)
 
 
-build:
-	mkdir -p $(OBJDIR)
-	$(CC) $(CFLAGS) -c $(SRCDIR)/informative.c -o $(OBJDIR)/informative.o
-	$(CC) $(CFLAGS) -c $(SRCDIR)/strman.c -o $(OBJDIR)/strman.o
-	$(CC) $(CFLAGS) -c $(SRCDIR)/config.c -o $(OBJDIR)/config.o
-	$(CC) $(CFLAGS) -c $(SRCDIR)/input.c -o $(OBJDIR)/input.o
-	$(CC) $(CFLAGS) -c $(SRCDIR)/exec.c -o $(OBJDIR)/exec.o
-	$(CC) $(CFLAGS) -c $(SRCDIR)/main.c -o $(OBJDIR)/main.o
+$(OBJDIR)/$(BIN): $(OBJS)
+	$(CC) $(OBJS) -o ./$(BIN) $(LDFLAGS)
 
-.PHONY: clean install
+$(OBJDIR)/%.c.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-install: 
-	$(CC) $(CFLAGS) $(OBJDIR)/*.o -o $(DST)
+
+.PHONY: clean install uninstall
 
 clean:
-	rm -rf $(OBJDIR)
+	$(RM) -r $(OBJDIR)
+	$(RM) ./$(BIN)
+
+install:
+	install ./$(BIN) $(DST)
+
+uninstall: 
+	$(RM) $(DST)

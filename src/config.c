@@ -80,7 +80,6 @@ int generate_config(const char *abs_config_path) {
 			
 			retval = 0;
 		}
-		
 		else
 			retval = -1;
 		
