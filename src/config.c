@@ -37,7 +37,7 @@ static struct users_configs *input_configs() {
 		if(!(input->docs_dir_path = get_line(stdin))) 
 			goto Out;
 
-		printf("\nPlease enter your pdf's viewer absolute path: ");
+		printf("\nPlease enter your pdf's viewer name: ");
 		if(!(input->pdf_viewer = get_line(stdin)))
 			goto Out;
 		

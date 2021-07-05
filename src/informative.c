@@ -171,3 +171,14 @@ void *reallocarray_inf(void *ptr, size_t nmemb, size_t size) {
 
 	return retval;
 }
+
+
+char *getenv_inf(const char *name) {
+	char *retval;
+
+	if(!(retval = getenv(name)))
+		fprintf(stderr, "%s: couldn't find '%s' environment variable\n", 
+				prog_name_inf, name);
+
+	return retval;
+}

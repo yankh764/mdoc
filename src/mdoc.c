@@ -14,6 +14,7 @@
 #include "exec.h"
 #include "input.h"
 #include "strman.h"
+#include "informative.h"
 #include "mdoc.h"
 
 #define ANSI_COLOR_RED   "\x1b[31m"
@@ -214,6 +215,7 @@ static struct l_list *search_for_doc_retval(struct l_list *current_node,
 	else
 		return NULL;
 }
+
 
 /*
  * Function for the cleanup when error occures in search_for_doc().
@@ -428,7 +430,7 @@ static void reorganize_l_list_alpha(struct l_list *unsorted_l_list,
 void reverse_l_list_obj(struct l_list *ptr) {
 	const unsigned int obj_num = count_l_list_nodes(ptr);
 	char *objs_array[obj_num+1];
-	int i;
+	long int i;
 
 	save_l_list_obj(ptr, objs_array);
 	
@@ -437,8 +439,8 @@ void reverse_l_list_obj(struct l_list *ptr) {
 }
 
 
-void help(const char *name) {
-	printf("Usage: %s <options> [argument]\n", name);
+void display_help(const char *name) {
+	printf("Usage: %s  <options>  [argument]\n", name);
 	printf("A command-line tool for managing your documents and easing your life.");
 	
 	printf("\n\n");
@@ -457,4 +459,15 @@ void help(const char *name) {
 		   " -R \t\t Disable recursive searching for the documents.\n"
 		   " -C \t\t Disable colorful output.\n"
 	      );
+	
+	printf("\nNOTES:\n");
+	printf(
+	       "  1. If one of the options -g or -h is used, the program will execute it,\n"
+		   "     then it'll ommit the rest of the options and terminate immediately.\n\n"
+		   "  2. If the options -c, -l and -o are used in the same combination,\n"
+		   "     the program will execute the last one of them and ommit the rest.\n\n"
+		   "  3. You can use the -a optoin with the -c and -l options instead of\n"
+		   "     passing an actual argument.\n\n"
+		   "  4. The program won't execute the -o option if more than 1 result was found.\n"
+		  );
 }

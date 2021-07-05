@@ -22,6 +22,7 @@ $(OBJDIR)/%.c.o: %.c
 
 .PHONY: clean install uninstall
 
+
 clean:
 	$(RM) -r $(OBJDIR)
 	$(RM) ./$(BIN)

@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "config.h"
-#include "informative.h"
 
 /* To indicate if an previous error eccoured in a functions
    that could overwrite errno with 0 (success) before returning */
@@ -23,6 +22,6 @@ int sort_docs_alpha(struct l_list *);
 void free_l_list(struct l_list *);
 unsigned int count_l_list_nodes(struct l_list *);
 void reverse_l_list_obj(struct l_list *);
-void help(const char *);
+void display_help(const char *);
 
 #endif

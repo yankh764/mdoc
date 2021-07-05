@@ -23,5 +23,6 @@ int execv_inf(const char *, char *const *);
 void *realloc_inf(void *, size_t);
 int execvp_inf(const char *, char *const *);
 void *reallocarray_inf(void *, size_t, size_t);
+char *getenv_inf(const char *);
 
 #endif
