@@ -1,10 +1,13 @@
 /*
----------------------------------------------------------
-| License: GNU GPL-3.0                                  |
----------------------------------------------------------
-| This source file contains all the necessary functions |
-| for the mdoc program.                                 |
----------------------------------------------------------
+----------------------------------------------------------
+| License: GNU GPL-3.0                                   |
+----------------------------------------------------------
+| This file contains the main functions for the mdoc pr- |
+| ogram.                                                 |
+| This program's purposes are to help you managing your  |
+| documents and especially while opening them, somehow   |
+| like xdg-open.                                         |
+----------------------------------------------------------
 */
 
 #include <stdio.h>
@@ -19,7 +22,10 @@ const char *prog_name_inf;
 
 /* Static Functions Prototype */
 static char *get_config_path();
-
+static int count_docs();
+static void missing_arg_err(const int);
+static void invalid_arg_err(const int);
+static int generate_config_file();
 
 static char *get_config_path() {
     const char *config_path = ".config/mdoc";
@@ -41,8 +47,37 @@ static char *get_config_path() {
 }
 
 
+static void missing_arg_err(const int opt) {
+    fprintf(stderr, "%s: missing argument for the '-%c' option\n", prog_name_inf, opt);
+    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
+}
+
+
+static void invalid_arg_err(const int opt) {
+    fprintf(stderr, "%s: invalid option '-%c'\n", prog_name_inf, opt);
+    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
+}
+
+
+static int generate_config_file() {
+    char *config_path; 
+    int retval = -1;
+
+    if((config_path = get_config_path())) {
+        if(!generate_config(config_path))
+            retval = 0;
+
+        free(config_path);
+    }
+
+    return retval;
+}
+
+
 int main(int argc, char **argv) {
-    const char *valid_opt = ":hgsraic:l:o:RC";
+    const char *valid_opt = ":hgsraic::l::o:RC";
+    char *count_arg, *open_arg, *list_arg;
+    struct l_list *doc_list = NULL;
     char *config_path = NULL;
     bool recursive = 1;
     bool reverse = 0;
@@ -51,15 +86,26 @@ int main(int argc, char **argv) {
     bool count = 0;
     bool list = 0;
     bool open = 0;
-    bool help = 1;
     bool sort = 0;
     bool all = 0;
-    int retval, opt;
+    int retval = 0;
+    int opt;
 
     prog_name_inf = argv[0];
+   
+    if(argc == 1)
+        display_help(prog_name_inf);
 
     while((opt = getopt(argc, argv, valid_opt)) != EOF) {
         switch(opt) {
+            case 'h':
+                display_help(prog_name_inf);
+                goto Out;
+            case 'g':
+                if(generate_config_file())
+                    goto Error;
+                    
+                goto Out;
             case 's':
                 sort = 1;
                 break;
@@ -72,40 +118,49 @@ int main(int argc, char **argv) {
             case 'i':
                 ignore = 1;
                 break;
-            case 'C':
-                color = 0;
+            case 'c':
+                count = 1;
+                count_arg = optarg;
+                break;
+            case 'l':
+                list = 1;
+                list_arg = optarg;
+                break;
+            case 'o':
+                open = 1;
+                open_arg = optarg;
                 break;
             case 'R':
                 recursive = 0;
                 break;
-            case 'c':
-                
-            /* Accept no other options if -h or -g is passed */ 
-            case 'h':
-                display_help(prog_name_inf);
-                goto Out;
-            
-            case 'g':
-                if((config_path = get_config_path())) {
-                    if(generate_config(config_path))
-                        goto CleanUp;
-                }
-                else 
-                    retval = 1; 
-                
-                goto Out;    
+            case 'C':
+                color = 0;
+                break;
+            case ':':
+                missing_arg_err(optopt);
+                goto Error;
+            default:
+                invalid_arg_err(optopt) ;
+                goto Error;
         }
     }
     
-    if(help)
-        display_help(prog_name_inf);
+    if(count) {
+        if(all)
+            count_arg = NULL;
+        
+        else if(!count_arg)
+            goto Error;
+
+    }
 
     Out:
-        return retval;
-
-    CleanUp:
         if(config_path)
             free(config_path);
+        return retval;
+
+    Error:
+        retval = 1;
 
         goto Out;
 }

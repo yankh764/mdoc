@@ -448,26 +448,24 @@ void display_help(const char *name) {
 	printf("Available options:\n");
 	printf(
 	       " -h \t\t Display this help message.\n"
-		   " -g \t\t Generate new configurations file.\n"
-		   " -s \t\t Sort the founded documents alphabetically.\n"
-		   " -r \t\t Reverse the order of the founded documents.\n"
-		   " -a \t\t Include all documents.\n"
+	       " -g \t\t Generate new configurations file.\n"
+	       " -s \t\t Sort the founded documents alphabetically.\n"
+	       " -r \t\t Reverse the order of the founded documents.\n"
+	       " -a \t\t Include all documents.\n"
 	       " -i \t\t Ignore case distinctions while searching for the documents.\n"
-		   " -c \t\t Count the existing documents with the passed string sequence.\n"
-		   " -l \t\t List the existing documents with the passed string sequence.\n"
-		   " -o \t\t Open the founded document with the passed string sequence.\n"
-		   " -R \t\t Disable recursive searching for the documents.\n"
-		   " -C \t\t Disable colorful output.\n"
+	       " -c \t\t Count the existing documents with the passed string sequence.\n"
+	       " -l \t\t List the existing documents with the passed string sequence.\n"
+	       " -o \t\t Open the founded document with the passed string sequence.\n"
+	       " -R \t\t Disable recursive searching for the documents.\n"
+	       " -C \t\t Disable colorful output.\n"
 	      );
 	
 	printf("\nNOTES:\n");
 	printf(
-	       "  1. If one of the options -g or -h is used, the program will execute it,\n"
-		   "     then it'll ommit the rest of the options and terminate immediately.\n\n"
-		   "  2. If the options -c, -l and -o are used in the same combination,\n"
-		   "     the program will execute the last one of them and ommit the rest.\n\n"
-		   "  3. You can use the -a optoin with the -c and -l options instead of\n"
-		   "     passing an actual argument.\n\n"
-		   "  4. The program won't execute the -o option if more than 1 result was found.\n"
-		  );
+	       "  1. You can use the -a optoin with the -c and -l options instead of\n"
+	       "     passing an actual argument.\n\n"
+	       "  2. The program won't execute the -o option if more than 1 result were found.\n\n"
+	       "  3. Please use the -g option alone because the program will execute it and\n"
+	       "     ommit the rest.\n"
+	      );
 }
