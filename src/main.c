@@ -27,6 +27,7 @@ static void missing_arg_err(const int);
 static void invalid_arg_err(const int);
 static int generate_config_file();
 
+
 static char *get_config_path() {
     const char *config_path = ".config/mdoc";
     char *abs_config_path;
