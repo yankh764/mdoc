@@ -78,6 +78,7 @@ static int generate_config_file() {
 int main(int argc, char **argv) {
     const char *valid_opt = ":hgsraic::l::o:RC";
     char *count_arg, *open_arg, *list_arg;
+    struct users_configs *configs = NULL;
     struct l_list *doc_list = NULL;
     char *config_path = NULL;
     bool recursive = 1;
@@ -101,12 +102,10 @@ int main(int argc, char **argv) {
         switch(opt) {
             case 'h':
                 display_help(prog_name_inf);
-                goto Out;
+                return retval;
             case 'g':
-                if(generate_config_file())
-                    goto Error;
-                    
-                goto Out;
+                retval = generate_config_file();
+                return retval;
             case 's':
                 sort = 1;
                 break;
@@ -139,29 +138,23 @@ int main(int argc, char **argv) {
                 break;
             case ':':
                 missing_arg_err(optopt);
-                goto Error;
+                //goto Error;
             default:
                 invalid_arg_err(optopt) ;
-                goto Error;
+                //goto Error;
         }
     }
-    
-    if(count) {
-        if(all)
-            count_arg = NULL;
-        
-        else if(!count_arg)
-            goto Error;
 
+    if(count) {
+        ;
     }
 
-    Out:
+    CleanUp:
         if(config_path)
             free(config_path);
-        return retval;
+    
+        if(configs)
+            free_users_configs(configs);
 
-    Error:
-        retval = 1;
-
-        goto Out;
+    return retval;
 }

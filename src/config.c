@@ -19,6 +19,17 @@
 static struct users_configs *input_configs();
 static void write_configs(FILE *, const struct users_configs *);
 static void *alloc_users_configs();
+static char *get_line_inf(FILE *);
+
+
+static char *get_line_inf(FILE *stream) {
+	char *retval;
+
+	if(!(retval = get_line(stream)))
+		fprintf(stderr, "%s: couldn't read an necessary input\n", prog_name_inf);
+
+	return retval;
+}
 
 
 /*                                                                   
@@ -34,11 +45,11 @@ static struct users_configs *input_configs() {
 		input->docs_dir_path = input->pdf_viewer = input->add_args = NULL;
 	
 		printf("Please enter your documents directory absolute path: ");
-		if(!(input->docs_dir_path = get_line(stdin))) 
+		if(!(input->docs_dir_path = get_line_inf(stdin))) 
 			goto Out;
 
 		printf("\nPlease enter your pdf's viewer name: ");
-		if(!(input->pdf_viewer = get_line(stdin)))
+		if(!(input->pdf_viewer = get_line_inf(stdin)))
 			goto Out;
 		
 		printf("\nPlease enter additional arguments for your pdf viewer (optional): ");
@@ -110,10 +121,9 @@ struct users_configs *read_configs(const char *abs_config_path) {
 		if((configs = alloc_users_configs())) {
 			configs->docs_dir_path = configs->pdf_viewer = configs->add_args = NULL;
 
-			if((configs->docs_dir_path = get_line(fp)) 
-			 && (configs->pdf_viewer = get_line(fp))
-			 && ((configs->add_args = get_line(fp))
-			 || !errno))
+			if((configs->docs_dir_path = get_line_inf(fp)) 
+			 && (configs->pdf_viewer = get_line_inf(fp))
+			 && ((configs->add_args = get_line(fp)) || !errno))
 				retval = configs;
 		}
 		else
