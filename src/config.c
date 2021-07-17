@@ -85,14 +85,11 @@ int generate_config(const char *abs_config_path) {
 
 	if((fp = fopen_inf(abs_config_path, "w"))) {
 		if((configs = input_configs())) {
-			
 			write_configs(fp, configs);			
 			free_users_configs(configs); 
 			
 			retval = 0;
 		}
-		else
-			retval = -1;
 		
 		if(fclose_inf(fp))
 			retval = -1;
@@ -126,8 +123,6 @@ struct users_configs *read_configs(const char *abs_config_path) {
 			 && ((configs->add_args = get_line(fp)) || !errno))
 				retval = configs;
 		}
-		else
-			retval = NULL;
 
 		if(fclose_inf(fp))
 			retval = NULL;

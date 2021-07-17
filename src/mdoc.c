@@ -33,12 +33,13 @@ static struct l_list *get_last_node(struct l_list *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
-static void print_colorful(struct l_list *);
-static void print_no_color(struct l_list *);
+static void print_docs_colorful(struct l_list *);
+static void print_docs_no_color(struct l_list *);
 static void save_l_list_obj(struct l_list *, char **);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char *const *);
 static void *alloc_l_list();
+static void print_opening_doc(const char *, const bool);
 static struct l_list *search_for_doc_retval(struct l_list *, 
                                             struct l_list *,  
                                             struct l_list *);
@@ -97,7 +98,7 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
 static struct l_list *get_last_node(struct l_list *ptr) {
 	struct l_list *prev;
 
-	for(prev=NULL; ptr; ptr=ptr->next)
+	for(; ptr; ptr=ptr->next)
 		prev = ptr;
 
 	return prev;
@@ -237,21 +238,20 @@ static void search_for_doc_error(char *char_ptr,
 
 void display_docs(struct l_list *ptr, const bool color_status) {
 		if(color_status)
-			print_colorful(ptr);
-
+			print_docs_colorful(ptr);
 		else
-			print_no_color(ptr);
+			print_docs_no_color(ptr);
 
 }
 
 
-static void print_colorful(struct l_list *ptr) {
+static void print_docs_colorful(struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
 		printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
 }
 
 
-static void print_no_color(struct l_list *ptr) {
+static void print_docs_no_color(struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
 		printf("<*> %s\n", ptr->obj);
 }
@@ -372,14 +372,18 @@ void prep_open_doc_argv(char **argv, char *pdf_viewer,
 int open_doc(char *const *argv, const char *doc_path, const bool colorful) {
 	int retval;
 
-	if(!(retval = execvp_process(argv[0], argv))) {
-		if(colorful)
-			printf(ANSI_COLOR_YELLOW "Opening:" ANSI_COLOR_RESET " %s\n", doc_path);
-		else 
-			printf("Opening: %s\n", doc_path);
-	}
+	if(!(retval = execvp_process(argv[0], argv)))
+		print_opening_doc(doc_path, colorful);
 	
 	return retval;
+}
+
+
+static void print_opening_doc(const char *doc_path, const bool colorful) {
+	if(colorful)
+		printf(ANSI_COLOR_YELLOW "Opening:" ANSI_COLOR_RESET " %s\n", doc_path);
+	else 
+		printf("Opening: %s\n", doc_path);
 }
 
 
@@ -442,9 +446,7 @@ void reverse_l_list_obj(struct l_list *ptr) {
 void display_help(const char *name) {
 	printf("Usage: %s  <options>  [argument]\n", name);
 	printf("A command-line tool for managing your documents and easing your life.");
-	
 	printf("\n\n");
-	
 	printf("Available options:\n");
 	printf(
 	       " -h \t\t Display this help message.\n"
@@ -459,7 +461,6 @@ void display_help(const char *name) {
 	       " -R \t\t Disable recursive searching for the documents.\n"
 	       " -C \t\t Disable colorful output.\n"
 	      );
-	
 	printf("\nNOTES:\n");
 	printf(
 	       "  1. You can use the -a optoin with the -c and -l options instead of\n"

@@ -220,7 +220,8 @@ unsigned int count_words(const char *line) {
 
 
 /*
- * Replace each space (white character) with a null byte.
+ * Replace each space (white character) with a null byte 
+ * and return the number of characters before this white char.
  */
 unsigned int space_to_null(char *text) {
 	unsigned int i;

@@ -2,7 +2,6 @@
 #define MDOC_H
 
 #include <stdbool.h>
-#include "config.h"
 
 /* To indicate if an previous error eccoured in a functions
    that could overwrite errno with 0 (success) before returning */
