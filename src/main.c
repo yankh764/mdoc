@@ -22,10 +22,14 @@ const char *prog_name_inf;
 
 /* Static Functions Prototype */
 static char *get_config_path();
-static int count_docs();
 static void missing_arg_err(const int);
 static void invalid_arg_err(const int);
-static int generate_config_file();
+static int generate_opt();
+static struct users_configs *get_configs();
+static int count_opt(const char *, const char *, 
+                     const bool, const bool);
+static int list_opt(const char *, const char *,
+                    const bool, const bool, const bool);
 
 
 static char *get_config_path() {
@@ -60,7 +64,7 @@ static void invalid_arg_err(const int opt) {
 }
 
 
-static int generate_config_file() {
+static int generate_opt() {
     char *config_path; 
     int retval = -1;
 
@@ -75,11 +79,61 @@ static int generate_config_file() {
 }
 
 
+static struct users_configs *get_configs() {
+    struct users_configs *retval = NULL;
+    char config_path;
+
+    if((config_path = get_config_path())) {
+        retval = read_configs(config_path);
+        free(config_path);
+    }
+
+    return retval;
+}
+
+
+static int count_opt(const char *dir_path, const char *arg, 
+                     const bool ignore, const bool rec) {
+    struct l_list *doc_list = NULL;
+    unsigned int doc_num;
+    int retval = -1;
+
+    doc_list = search_for_doc(dir_path, arg, ignore, rec);
+    
+    if(!prev_error) {
+        doc_num = count_l_list_nodes(doc_list);
+
+        printf("%d documents were found.\n", doc_num);
+
+        if(doc_list)
+            free_l_list(doc_list);
+
+        retval = 0;
+    }
+
+    return retval;
+}
+
+
+static int list_opt(const char *dir_path, const char *arg,
+                    const bool ignore, const bool rec, 
+                    const bool color) {
+    struct l_list *doc_list = NULL;
+    int retval = -1;
+
+    doc_list = search_for_doc(dir_path, arg, ignore, rec);
+    
+    if(!prev_error) {
+        if(doc_list) 
+            display_docs(doc_list, color);
+    }
+}
+
+
 int main(int argc, char **argv) {
     const char *valid_opt = ":hgsraic::l::o:RC";
     char *count_arg, *open_arg, *list_arg;
     struct users_configs *configs = NULL;
-    struct l_list *doc_list = NULL;
     char *config_path = NULL;
     bool recursive = 1;
     bool reverse = 0;
@@ -90,7 +144,7 @@ int main(int argc, char **argv) {
     bool open = 0;
     bool sort = 0;
     bool all = 0;
-    int retval = 0;
+    int retval = 1;
     int opt;
 
     prog_name_inf = argv[0];
@@ -102,10 +156,13 @@ int main(int argc, char **argv) {
         switch(opt) {
             case 'h':
                 display_help(prog_name_inf);
-                return retval;
+                retval = 0;
+                goto Out;
             case 'g':
-                retval = generate_config_file();
-                return retval;
+                if(!generate_opt())
+                    retval = 0;
+
+                goto Out;
             case 's':
                 sort = 1;
                 break;
@@ -126,7 +183,7 @@ int main(int argc, char **argv) {
                 list = 1;
                 list_arg = optarg;
                 break;
-            case 'o':
+            case 'o':+
                 open = 1;
                 open_arg = optarg;
                 break;
@@ -138,23 +195,53 @@ int main(int argc, char **argv) {
                 break;
             case ':':
                 missing_arg_err(optopt);
-                //goto Error;
+                goto Out;
             default:
                 invalid_arg_err(optopt) ;
-                //goto Error;
+                goto Out;
         }
     }
-
+        
     if(count) {
-        ;
+        if(!configs)
+            if(!((configs = get_configs())))
+                goto Out;
+
+        if(all)
+            count_arg = NULL;
+        else if(!count_arg)
+            goto Out;
+
+        if(count_docs)
+            goto Out;
     }
 
-    CleanUp:
+    if(list) {
+        if(!configs)
+            if(!(configs = get_configs()))
+                goto Out;
+
+        if(list_docs)
+            goto Out;
+    }
+
+    if(open) {
+        if(!configs)
+            if(!(configs = get_configs()))
+                goto Out;
+
+        if(open_doc)
+            goto Out;
+    }
+
+    retval = 0;
+
+    Out:
         if(config_path)
             free(config_path);
     
         if(configs)
             free_users_configs(configs);
 
-    return retval;
+        return retval;
 }
