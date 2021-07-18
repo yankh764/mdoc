@@ -17,9 +17,9 @@
 #include "informative.h"
 #include "mdoc.h"
 
-#define ANSI_COLOR_RED   "\x1b[31m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_RESET "\x1b[0m"
+#define ANSI_COLOR_RED    "\x1b[31m"
+#define ANSI_COLOR_YELLOW "\x1b[33m"
+#define ANSI_COLOR_RESET  "\x1b[0m"
 
 
 /* To indicate if an previous error occoured in a functions
