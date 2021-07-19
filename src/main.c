@@ -29,10 +29,10 @@ static void invalid_arg_err(const int);
 static int generate_opt();
 static struct users_configs *get_configs();
 static int count_opt(const char *, const char *, const bool, const bool);
-static void list_opt(struct l_list *, const bool);
-static int open_opt(char *, char *, char *, const bool); 
-static void disable_bool_flags(bool *, bool *, bool *, 
-                               bool *, bool *, bool *);
+static int list_opt(const char *, const char *, const bool,
+                    const bool, const bool, const bool, const bool);
+static int open_opt(const struct users_configs, const char *, 
+                    const bool, const bool, const bool);
 
 
 static char *get_config_path() {
@@ -115,42 +115,64 @@ static int count_opt(const char *dir_path, const char *str,
 }
 
 
-static void list_opt(struct l_list *doc_list ,const bool color) 
-{
-    display_docs(doc_list, color);
-}
-
-
-static int open_opt(char *pdf_viewer, char *doc_path, 
-                    char *add_args, const bool color) {
-   /* The 2 stands for pdf_viewer and doc_path */
-    const unsigned int argc = count_words(add_args) + 2; 
-    char *argv[argc+1];
-
-    prep_open_doc_argv(argv, pdf_viewer, doc_path, add_args);
+static int list_opt(const char *dir_path, const char *str, 
+                    const bool ignore, const bool rec, 
+                    const bool color, const bool sort, 
+                    const bool reverse) {
+    struct l_list *doc_list;
+    int retval = 0;
     
-    return open_doc(argv, doc_path, color);  
+    if((doc_list = search_for_doc(dir_path, str, ignore, rec))) {
+        if(sort)
+            sort_docs_alpha(doc_list);
+
+        if(reverse)
+            reverse_l_list_obj(doc_list);
+        
+        printf("These are the documents that were found:\n\n");
+        display_docs(doc_list, color);
+
+        free_l_list(doc_list);
+    }
+    else if(prev_error)
+        retval = -1;
+
+    return retval;
 }
 
 
-/*
- * Disable neccesary bool flags when using the -h or -g.
- */
-static void disable_bool_flags(bool *help, bool *generate, 
-                               bool *count, bool *list, 
-                               bool *open, bool *need_configs) {
-    *help = 0;
-    *generate = 0;
-    *count = 0;
-    *list = 0;
-    *open = 0;
-    *need_configs = 0;
+static int open_opt(const struct users_configs configs, const char *str, 
+                    const bool ignore, const bool rec, const bool color) {
+   /* The 2 stands for pdf_viewer and doc_path */
+    const char *dir_path = configs.docs_dir_path;
+    const unsigned int argc = count_words(dir_path) + 2; 
+    struct l_list *doc_list;
+    unsigned int docs_num;
+    char *argv[argc+1];
+    char *doc_path;
+    int retval = -1;
+    
+    if((doc_list = search_for_doc(dir_path, str, ignore, rec))) {
+        docs_num = count_l_list_nodes(doc_list);
+        
+        if(docs_num == 1) {
+            prep_open_doc_argv(argv, pdf_viewer, doc_path, add_args);
+            
+        }
+    }
+    
+    else if(!prev_error)
+        fprintf(stderr, "No document were found\n");
+    
+    //prep_open_doc_argv(argv, pdf_viewer, doc_path, add_args);
+    
+    //return open_doc(argv, doc_path, color);  
 }
 
 
 int main(int argc, char **argv) {
-    const char *valid_opt = ":hgsraic::l:o:RC";
-    char *count_arg = NULL, *open_arg, *list_arg;
+    const char *valid_opt = ":hgsraic::l::o:RC";
+    char *count_arg, *open_arg, *list_arg;
     struct users_configs *configs = NULL;
     struct l_list *doc_list = NULL;
     bool need_configs = 0;
@@ -165,7 +187,7 @@ int main(int argc, char **argv) {
     bool open = 0;
     bool sort = 0;
     bool all = 0;
-    int retval;
+    int retval = 1;
     int opt;
 
     prog_name_inf = argv[0];
@@ -201,7 +223,7 @@ int main(int argc, char **argv) {
             case 'l':
                 list = 1;
                 need_configs = 1;
-                list_arg = optarg;
+                list_arg = argv[optind];
                 break;
             case 'o':
                 open = 1;
@@ -222,27 +244,44 @@ int main(int argc, char **argv) {
                 goto Out;
         }
 
-    if(help) {
+    if(help)
         display_help(prog_name_inf);
-        disable_bool_flags(&help, &generate, &count, 
-                           &list, &open, &need_configs);
-    }
-    
-    if(need_configs)
-        if(!(configs = get_configs()))
+   
+    else if(generate) { 
+        if(generate_opt())
             goto Out;
+    }
 
-    if(count) {
+    else if(count) {
         if(all) 
             count_arg = NULL;
+           
         else if(!count_arg) {
             missing_arg_err('c');
             goto Out;
         }
 
-        if(!count_opt(configs->docs_dir_path, count_arg, ignore, recursive))
+        if(count_opt(configs->docs_dir_path, count_arg, ignore, recursive))
             goto Out;
     }
+
+    else if(list) {
+        if(all)
+            list_arg = NULL;
+
+        else if(!list_arg) {
+            missing_arg_err('l');
+            goto Out;
+        }
+            
+        if(list_opt(configs->docs_dir_path, list_arg, ignore, 
+                    recursive, color, sort, reverse))
+            goto Out;
+    }
+
+    else if(open)
+        if(open_opt(*configs, open_arg, ignore, recursive, color))
+            goto Out;
 
     retval = 0;
 
