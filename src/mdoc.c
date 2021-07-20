@@ -17,10 +17,6 @@
 #include "informative.h"
 #include "mdoc.h"
 
-#define ANSI_COLOR_RED    "\x1b[31m"
-#define ANSI_COLOR_YELLOW "\x1b[33m"
-#define ANSI_COLOR_RESET  "\x1b[0m"
-
 
 /* To indicate if an previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
@@ -33,15 +29,13 @@ static struct l_list *get_last_node(struct l_list *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
-static void print_docs_colorful(struct l_list *);
-static void print_docs_no_color(struct l_list *);
-static void save_l_list_obj(struct l_list *, char **);
+static void print_docs_colorful(const struct l_list *);
+static void print_docs_no_color(const struct l_list *);
+static void save_l_list_obj(const struct l_list *, char **);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char *const *);
 static void *alloc_l_list();
-static void print_opening_doc(const char *, const bool);
-static struct l_list *search_for_doc_retval(struct l_list *, 
-                                            struct l_list *,  
+static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
                                             struct l_list *);
 
 
@@ -120,13 +114,14 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	struct l_list *doc_list_begin; 
 	struct dirent *entry;
 	struct stat stbuf;
-	char *new_path = NULL;
+	char *new_path;
 	size_t len;
 	int ret;
 	DIR *dp;
 
-	/* Initialize l_list pointers */
+	/* Initialize pointers */
 	doc_list_rec_begin = doc_list_begin = current_node_rec = current_node = NULL;
+	new_path = NULL;
 
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
@@ -236,7 +231,7 @@ static void search_for_doc_error(char *char_ptr,
 }
 
 
-void display_docs(struct l_list *ptr, const bool color_status) {
+void display_docs(const struct l_list *ptr, const bool color_status) {
 		if(color_status)
 			print_docs_colorful(ptr);
 		else
@@ -245,19 +240,19 @@ void display_docs(struct l_list *ptr, const bool color_status) {
 }
 
 
-static void print_docs_colorful(struct l_list *ptr) {
+static void print_docs_colorful(const struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
 		printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
 }
 
 
-static void print_docs_no_color(struct l_list *ptr) {
+static void print_docs_no_color(const struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
 		printf("<*> %s\n", ptr->obj);
 }
 
 
-unsigned int count_l_list_nodes(struct l_list *ptr) {
+unsigned int count_l_list_nodes(const struct l_list *ptr) {
 	unsigned int i;
 
 	for(i=0; ptr; i++)
@@ -369,21 +364,9 @@ void prep_open_doc_argv(char **argv, char *pdf_viewer,
 }
 
 
-int open_doc(char *const *argv, const char *doc_path, const bool colorful) {
-	int retval;
-
-	if(!(retval = execvp_process(argv[0], argv)))
-		print_opening_doc(doc_path, colorful);
-	
-	return retval;
-}
-
-
-static void print_opening_doc(const char *doc_path, const bool colorful) {
-	if(colorful)
-		printf(ANSI_COLOR_YELLOW "Opening:" ANSI_COLOR_RESET " %s\n", doc_path);
-	else 
-		printf("Opening: %s\n", doc_path);
+int open_doc(char *const *argv) 
+{
+	return execvp_process(argv[0], argv);
 }
 
 
@@ -408,7 +391,7 @@ int sort_docs_alpha(struct l_list *unsorted_l_list) {
 /*
  * Save every obj address in the linked list to the array of pointers.
  */
-static void save_l_list_obj(struct l_list *ptr, char **array) {
+static void save_l_list_obj(const struct l_list *ptr, char **array) {
 	unsigned int i;
 
 	for(i=0; ptr; ptr=ptr->next)
@@ -465,8 +448,6 @@ void display_help(const char *name) {
 	printf(
 	       "  1. You can use the -a optoin with the -c and -l options instead of\n"
 	       "     passing an actual argument.\n\n"
-	       "  2. The program won't execute the -o option if more than 1 result were found.\n\n"
-	       "  3. Please use the -g option alone because the program will execute it and\n"
-	       "     ommit the rest.\n"
+	       "  2. The program won't execute the -o option if more than 1 result were found.\n"
 	      );
 }
