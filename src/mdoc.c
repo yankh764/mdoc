@@ -242,7 +242,9 @@ void display_docs(const struct l_list *ptr, const bool color_status) {
 
 static void print_docs_colorful(const struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
-		printf("<*> " ANSI_COLOR_RED "%s" ANSI_COLOR_RESET "\n", ptr->obj);
+		printf(ANSI_COLOR_BLUE "<" ANSI_COLOR_GREEN "*" ANSI_COLOR_BLUE ">" 
+		       ANSI_COLOR_RED " %s" ANSI_COLOR_RESET "\n", 
+		       ptr->obj);
 }
 
 
@@ -428,10 +430,13 @@ void reverse_l_list_obj(struct l_list *ptr) {
 
 void display_help(const char *name) {
 	printf("Usage: %s  <options>  [argument]\n", name);
-	printf("A command-line tool for managing your documents and easing your life.");
-	printf("\n\n");
-	printf("Available options:\n");
 	printf(
+	       "A command-line tool for managing your documents and easing your life."
+	       
+		   "\n\n"
+		   
+		   "Available options:\n"
+
 	       " -h \t\t Display this help message.\n"
 	       " -g \t\t Generate new configurations file.\n"
 	       " -s \t\t Sort the founded documents alphabetically.\n"
@@ -443,9 +448,11 @@ void display_help(const char *name) {
 	       " -o \t\t Open the founded document with the passed string sequence.\n"
 	       " -R \t\t Disable recursive searching for the documents.\n"
 	       " -C \t\t Disable colorful output.\n"
-	      );
-	printf("\nNOTES:\n");
-	printf(
+           
+		   "\n\n"
+	       
+		   "NOTES:\n"
+
 	       "  1. You can use the -a optoin with the -c and -l options instead of\n"
 	       "     passing an actual argument.\n\n"
 	       "  2. The program won't execute the -o option if more than 1 result were found.\n"
