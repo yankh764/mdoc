@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <string.h>
 #include "strman.h"
-#include "config.h"
 #include "informative.h"
 #include "mdoc.h"
 
@@ -28,23 +27,22 @@ static void missing_arg_err(const int);
 static void invalid_arg_err(const int);
 static int generate_opt();
 static struct users_configs *get_configs();
-static void open_opt_docs_num_error(const unsigned int);
-static void print_opening_doc(const char *, const bool);
-static void print_docs_num(const struct l_list *, const bool);
+static void count_opt_cleanup(struct users_configs *, struct l_list *);
 static int count_opt(const char *, const bool, const bool, const bool);
 static void opt_cleanup(struct users_configs *, struct l_list *);
-static int open_opt(const char *, const bool, const bool, const bool);
-static int open_founded_doc_path(struct users_configs *, char *);
-static void open_opt_cleanup(struct users_configs *, struct l_list *, char *);
+static void big_docs_num_error();
+static void small_docs_num_error();
+static int rearrange_if_needed(struct l_list *, const bool, const bool); 
 static int list_opt(const char *, const bool, const bool, 
                     const bool, const bool, const bool);
-
+static int open_opt(const char *, const bool, const bool, 
+                    const bool, const bool, const bool, 
+                    const bool);
 
 
 static char *get_config_path() {
     const char *config = ".config/mdoc";
-    char *retval = NULL;
-    char *config_path;
+    char *config_path = NULL;
     const char *home; 
     size_t len;
 
@@ -53,11 +51,9 @@ static char *get_config_path() {
         
         if((config_path = malloc_inf(len)))
             snprintf(config_path, len, "%s/%s", home, config);
-
-        retval = config_path;
     }
-    
-    return retval;
+
+    return config_path;
 }
 
 
@@ -89,22 +85,22 @@ static int generate_opt() {
 
 
 static struct users_configs *get_configs() {
-    struct users_configs *retval = NULL;
+    struct users_configs *configs = NULL;
     char *config_path;
 
     if((config_path = get_config_path())) {
-        retval = read_configs(config_path);
+        configs = read_configs(config_path);
         free(config_path);
     }
 
-    return retval;
+    return configs;
 }
 
 
 static int count_opt(const char *str, const bool ignore, 
                      const bool rec, const bool color) {
-    struct l_list *doc_list = NULL;
     struct users_configs *configs;
+    struct l_list *doc_list;
     int retval = -1;
 
     if((configs = get_configs())) {
@@ -115,96 +111,14 @@ static int count_opt(const char *str, const bool ignore,
             retval = 0;
         }  
 
-        opt_cleanup(configs, doc_list);
+        count_opt_cleanup(configs, doc_list);
     }
 
     return retval;
 }
 
 
-/*
- * A cleanup for the functions list_opt() and count_opt()
- */
-static void opt_cleanup(struct users_configs *configs, struct l_list *doc_list) {
-    if(doc_list)
-        free_l_list(doc_list); 
-
-    free_users_configs(configs);
-}
-
-
-static void print_docs_num(const struct l_list *doc_list, const bool color) {
-    if(color)
-        printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "%d" ANSI_COLOR_BLUE "]"               
-               ANSI_COLOR_RED " documents were found\n" ANSI_COLOR_RESET, 
-               count_l_list_nodes(doc_list));
-    else
-        printf("[%d] documents were found\n", count_l_list_nodes(doc_list));
-}
-
-
-static int list_opt(const char *str, const bool ignore, const bool rec, 
-                    const bool color, const bool sort, 
-                    const bool reverse) {
-    struct l_list *doc_list = NULL;
-    struct users_configs *configs;
-    int retval = -1;
-    
-    if((configs = get_configs())) {
-        doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec);
-
-        if(!prev_error) {
-            if(doc_list && sort)
-                sort_docs_alpha(doc_list);
-                
-            if(doc_list && reverse)
-                reverse_l_list_obj(doc_list); 
-            
-            display_docs(doc_list, color);
-            
-            retval = 0;
-        }
-    
-        opt_cleanup(configs, doc_list);
-    }
-
-    return retval;
-}
-
-
-static int open_opt(const char *str, const bool ignore, 
-                    const bool rec, const bool color) {
-    struct l_list *doc_list = NULL;
-    struct users_configs *configs;
-    char *doc_path = NULL;
-    unsigned int doc_num;
-    int retval = -1;
-    
-    if((configs = get_configs())) {
-        doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec);
-    
-        if(!prev_error) {
-            if((doc_num = count_l_list_nodes(doc_list)) == 1) {
-                if((doc_path = get_doc_path(configs->docs_dir_path, doc_list->obj, rec))
-                 && !(retval = open_founded_doc_path(configs, doc_path)))
-                        print_opening_doc(doc_path, color);
-            }
-            else 
-                open_opt_docs_num_error(doc_num);
-        }
-
-        open_opt_cleanup(configs, doc_list, doc_path);
-    }
-    
-    return retval;
-}
-
-
-static void open_opt_cleanup(struct users_configs *configs, 
-                             struct l_list *doc_list, char *doc_path) {
-    if(doc_path)
-        free(doc_path);
-
+static void count_opt_cleanup(struct users_configs *configs, struct l_list *doc_list) {
     if(doc_list)
         free_l_list(doc_list);
 
@@ -212,41 +126,104 @@ static void open_opt_cleanup(struct users_configs *configs,
 }
 
 
-static int open_founded_doc_path(struct users_configs *configs, char *doc_path) {
-    const unsigned int argc = count_words(configs->docs_dir_path) + 2;
-    char *argv[argc+1];
-
-    prep_open_doc_argv(argv, configs->pdf_viewer, doc_path, configs->add_args);
-
-    return open_doc(argv);
+/*
+ * A cleanup for the functions list_opt() and open_opt()
+ */
+static void opt_cleanup(struct users_configs *configs, struct l_list *doc_list) {
+    free_l_list(doc_list); 
+    free_users_configs(configs);
 }
 
 
-static void print_opening_doc(const char *doc_path, const bool color) {
-	if(color)
-		printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "Opening" ANSI_COLOR_BLUE "] " 
-               ANSI_COLOR_RED "%s\n" ANSI_COLOR_RESET, 
-               doc_path);
-	else 
-		printf("Opening: %s\n", doc_path);
+static int rearrange_if_needed(struct l_list *doc_list, 
+                               const bool sort, const bool reverse) {
+    int retval = -1;
+
+    if(sort)
+        if(sort_docs_alpha(doc_list))
+            return retval;
+    
+    if(reverse)
+        reverse_l_list_obj(doc_list);
+
+    retval = 0;
+
+    return retval;
 }
 
 
-static void open_opt_docs_num_error(const unsigned int docs_num) {
-    if(docs_num == 0)
-        fprintf(stderr, "No document were found\n");
-    else
-        fprintf(stderr, "More than 1 document were found\n");
+static int list_opt(const char *str, const bool ignore, const bool rec, 
+                    const bool color, const bool sort, 
+                    const bool reverse) {
+    struct users_configs *configs;
+    struct l_list *doc_list;
+    int retval = -1;
+    
+    if((configs = get_configs()))
+        if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec))) {
+            if(!rearrange_if_needed(doc_list, sort, reverse)) 
+                display_docs(doc_list, color);
+            
+            opt_cleanup(configs, doc_list);
+            
+            retval = 0;
+        }
+
+    return retval;
+}
+
+
+static int open_opt(const char *str, const bool ignore, const bool rec, 
+                    const bool color, const bool sort, const bool reverse,
+                    const bool numerous) {
+    struct users_configs *configs;
+    struct l_list *doc_list;
+    int retval = -1;
+    
+    if((configs = get_configs())) {
+        if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec))) {
+            if(numerous) {
+                if(!rearrange_if_needed(doc_list, sort, reverse))
+                    retval = open_doc_list(configs, doc_list, rec, color);
+            }
+
+            else if(count_l_list_nodes(doc_list) == 1)
+                retval = open_doc_list(configs, doc_list, rec, color);
+            
+            else 
+                big_docs_num_error();
+            
+            opt_cleanup(configs, doc_list);
+        }
+        
+        else if(!prev_error)
+            small_docs_num_error();
+    }
+    
+    return retval;
+}
+
+
+static void big_docs_num_error() {
+    fprintf(stderr, "%s: can't open document: Several documents were found\n", prog_name_inf);
+    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
+}
+
+
+static void small_docs_num_error() {
+    fprintf(stderr, "%s: can't open document: No document were found\n", prog_name_inf);
+    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 }
 
             
 int main(int argc, char **argv) {
-    const char *valid_opt = ":hgsraic::l::o:RC";
+    const char *valid_opt = ":hgsrainc::l::o::RC";
     char *count_arg, *open_arg, *list_arg;
     struct users_configs *configs = NULL;
     struct l_list *doc_list = NULL;
     bool recursive = 1;
     bool generate = 0;
+    bool numerous = 0;
     bool reverse = 0;
     bool ignore = 0;
     bool color = 1;
@@ -284,6 +261,9 @@ int main(int argc, char **argv) {
             case 'i':
                 ignore = 1;
                 break;
+            case 'n':
+                numerous = 1;
+                break;
             case 'c':
                 count = 1;
                 count_arg = argv[optind];
@@ -294,7 +274,7 @@ int main(int argc, char **argv) {
                 break;
             case 'o':
                 open = 1;
-                open_arg = optarg;
+                open_arg = argv[optind];
                 break;
             case 'R':
                 recursive = 0;
@@ -344,9 +324,18 @@ int main(int argc, char **argv) {
             goto Out;
     }
 
-    else if(open)
-        if(open_opt(open_arg, ignore, recursive, color))
+    else if(open) {
+        if(all)
+            open_arg = NULL;
+
+        else if(!open_arg) {
+            missing_arg_err('o');
             goto Out;
+        }
+
+        if(open_opt(open_arg, ignore, recursive, color, sort, reverse, numerous))
+            goto Out;
+    }
 
     retval = 0;
 

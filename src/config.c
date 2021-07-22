@@ -26,7 +26,7 @@ static char *get_line_inf(FILE *stream) {
 	char *retval;
 
 	if(!(retval = get_line(stream)))
-		fprintf(stderr, "%s: couldn't read an necessary input\n", prog_name_inf);
+		fprintf(stderr, "\n%s: couldn't read an necessary input\n", prog_name_inf);
 
 	return retval;
 }

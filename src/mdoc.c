@@ -32,9 +32,13 @@ static char *get_doc_path_retval(char *, char *);
 static void print_docs_colorful(const struct l_list *);
 static void print_docs_no_color(const struct l_list *);
 static void save_l_list_obj(const struct l_list *, char **);
+static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char *const *);
 static void *alloc_l_list();
+static int open_founded_doc_path(struct users_configs *, char *);
+static int open_doc(char *const *);
+static void print_opening_doc(const char *, const bool);
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
                                             struct l_list *);
 
@@ -242,7 +246,7 @@ void display_docs(const struct l_list *ptr, const bool color_status) {
 
 static void print_docs_colorful(const struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
-		printf(ANSI_COLOR_BLUE "<" ANSI_COLOR_GREEN "*" ANSI_COLOR_BLUE ">" 
+		printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "+" ANSI_COLOR_BLUE "]" 
 		       ANSI_COLOR_RED " %s" ANSI_COLOR_RESET "\n", 
 		       ptr->obj);
 }
@@ -250,7 +254,7 @@ static void print_docs_colorful(const struct l_list *ptr) {
 
 static void print_docs_no_color(const struct l_list *ptr) {
 	for(; ptr; ptr=ptr->next)
-		printf("<*> %s\n", ptr->obj);
+		printf("[+] %s\n", ptr->obj);
 }
 
 
@@ -351,7 +355,7 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 
 
 void prep_open_doc_argv(char **argv, char *pdf_viewer, 
-                        char *doc_path, char *add_args) {
+                        char *add_args, char *doc_path) {
 	unsigned int i = 0;
 	unsigned int ret;
 
@@ -366,9 +370,72 @@ void prep_open_doc_argv(char **argv, char *pdf_viewer,
 }
 
 
-int open_doc(char *const *argv) 
+static int open_doc(char *const *argv) 
 {
 	return execvp_process(argv[0], argv);
+}
+
+
+int open_doc_list(struct users_configs *configs, 
+                  const struct l_list *doc_list,
+				  const bool rec, const bool color) {
+	const struct l_list *ptr = doc_list;
+	char *doc_path;
+	int retval = 0;
+
+	for(; !retval && ptr; ptr=ptr->next) {
+		if((doc_path = get_doc_path(configs->docs_dir_path, ptr->obj, rec))) {
+			if(!(retval = open_founded_doc_path(configs, doc_path)))
+				print_opening_doc(ptr->obj, color);
+			
+			free(doc_path);
+		}
+		else 
+			retval = -1;
+	}
+	
+	return retval;
+}
+
+
+static int open_founded_doc_path(struct users_configs *configs, char *doc_path) {
+    unsigned int argc = get_argc_val(configs->add_args);
+    char *argv[argc+1];
+
+    prep_open_doc_argv(argv, configs->pdf_viewer, configs->add_args, doc_path);
+
+    return open_doc(argv);
+}
+
+
+static unsigned int get_argc_val(const char *add_args) {
+	/* The 2 stands for doc_path and pdf_viewer */
+	unsigned int val = 2;
+
+	if(add_args)
+		val += count_words(add_args);
+
+	return val;
+}
+
+
+static void print_opening_doc(const char *doc_name, const bool color) {
+	if(color)
+		printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "OPENING" ANSI_COLOR_BLUE "]" 
+               ANSI_COLOR_RED " %s\n" ANSI_COLOR_RESET, 
+               doc_name);
+	else 
+		printf("[OPENING] %s\n", doc_name);
+}
+
+
+void print_docs_num(const struct l_list *doc_list, const bool color) {
+    if(color)
+        printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "COUNTED" ANSI_COLOR_BLUE "]"               
+               ANSI_COLOR_RED " %d Documents\n" ANSI_COLOR_RESET, 
+               count_l_list_nodes(doc_list));
+    else
+        printf("[COUNTED] %d Documents\n", count_l_list_nodes(doc_list));
 }
 
 
@@ -443,7 +510,8 @@ void display_help(const char *name) {
 	       " -r \t\t Reverse the order of the founded documents.\n"
 	       " -a \t\t Include all documents.\n"
 	       " -i \t\t Ignore case distinctions while searching for the documents.\n"
-	       " -c \t\t Count the existing documents with the passed string sequence.\n"
+	       " -n \t\t Allow numerous documents opening (execution).\n"
+		   " -c \t\t Count the existing documents with the passed string sequence.\n"
 	       " -l \t\t List the existing documents with the passed string sequence.\n"
 	       " -o \t\t Open the founded document with the passed string sequence.\n"
 	       " -R \t\t Disable recursive searching for the documents.\n"
@@ -453,8 +521,12 @@ void display_help(const char *name) {
 	       
 		   "NOTES:\n"
 
-	       "  1. You can use the -a optoin with the -c and -l options instead of\n"
-	       "     passing an actual argument.\n\n"
-	       "  2. The program won't execute the -o option if more than 1 result were found.\n"
+	       "  1. You can use the -a optoin with the -c, -l and -o options instead\n"
+	       "     of passing an actual argument.\n"
+		   
+		   "\n"
+
+	       "  2. You can use the -n option with the -o option to give the program\n"
+		   "     the approval to open more than one document in a run.\n"
 	      );
 }
