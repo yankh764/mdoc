@@ -27,17 +27,17 @@ static void missing_arg_err(const int);
 static void invalid_arg_err(const int);
 static int generate_opt();
 static struct users_configs *get_configs();
-static void count_opt_cleanup(struct users_configs *, struct l_list *);
 static int count_opt(const char *, const bool, const bool, const bool);
-static void opt_cleanup(struct users_configs *, struct l_list *);
+static void opts_cleanup(struct users_configs *, struct l_list *);
 static void big_docs_num_error();
 static void small_docs_num_error();
 static int rearrange_if_needed(struct l_list *, const bool, const bool); 
 static int list_opt(const char *, const bool, const bool, 
                     const bool, const bool, const bool);
-static int open_opt(const char *, const bool, const bool, 
-                    const bool, const bool, const bool, 
-                    const bool);
+static int numerous_opening(struct users_configs *, struct l_list *,
+                            const bool, const bool, const bool, const bool);
+static int open_opt(const char *, const bool, const bool, const bool, 
+                    const bool, const bool, const bool);
 
 
 static char *get_config_path() {
@@ -74,9 +74,7 @@ static int generate_opt() {
     int retval = -1;
 
     if((config_path = get_config_path())) {
-        if(!generate_config(config_path))
-            retval = 0;
-
+        retval = generate_config(config_path);
         free(config_path);
     }
 
@@ -111,14 +109,14 @@ static int count_opt(const char *str, const bool ignore,
             retval = 0;
         }  
 
-        count_opt_cleanup(configs, doc_list);
+        opts_cleanup(configs, doc_list);
     }
 
     return retval;
 }
 
 
-static void count_opt_cleanup(struct users_configs *configs, struct l_list *doc_list) {
+static void opts_cleanup(struct users_configs *configs, struct l_list *doc_list) {
     if(doc_list)
         free_l_list(doc_list);
 
@@ -126,29 +124,16 @@ static void count_opt_cleanup(struct users_configs *configs, struct l_list *doc_
 }
 
 
-/*
- * A cleanup for the functions list_opt() and open_opt()
- */
-static void opt_cleanup(struct users_configs *configs, struct l_list *doc_list) {
-    free_l_list(doc_list); 
-    free_users_configs(configs);
-}
-
-
 static int rearrange_if_needed(struct l_list *doc_list, 
                                const bool sort, const bool reverse) {
-    int retval = -1;
-
     if(sort)
         if(sort_docs_alpha(doc_list))
-            return retval;
+            return -1;
     
     if(reverse)
         reverse_l_list_obj(doc_list);
 
-    retval = 0;
-
-    return retval;
+    return 0;
 }
 
 
@@ -159,15 +144,13 @@ static int list_opt(const char *str, const bool ignore, const bool rec,
     struct l_list *doc_list;
     int retval = -1;
     
-    if((configs = get_configs()))
-        if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec))) {
-            if(!rearrange_if_needed(doc_list, sort, reverse)) 
+    if((configs = get_configs())) {
+        if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec)))
+            if(!(retval = rearrange_if_needed(doc_list, sort, reverse)))
                 display_docs(doc_list, color);
-            
-            opt_cleanup(configs, doc_list);
-            
-            retval = 0;
-        }
+        
+        opts_cleanup(configs, doc_list);
+    }
 
     return retval;
 }
@@ -182,25 +165,33 @@ static int open_opt(const char *str, const bool ignore, const bool rec,
     
     if((configs = get_configs())) {
         if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec))) {
-            if(numerous) {
-                if(!rearrange_if_needed(doc_list, sort, reverse))
-                    retval = open_doc_list(configs, doc_list, rec, color);
-            }
-
+            if(numerous)
+                retval = numerous_opening(configs, doc_list, rec, color, sort, reverse);
+            
             else if(count_l_list_nodes(doc_list) == 1)
                 retval = open_doc_list(configs, doc_list, rec, color);
             
             else 
-                big_docs_num_error();
-            
-            opt_cleanup(configs, doc_list);
+                big_docs_num_error();   
         }
-        
+
         else if(!prev_error)
             small_docs_num_error();
+            
+        opts_cleanup(configs, doc_list);
     }
     
     return retval;
+}
+
+
+static int numerous_opening(struct users_configs *configs, struct l_list *doc_list,
+                            const bool rec, const bool color, const bool sort,
+                            const bool reverse) {
+    if(rearrange_if_needed(doc_list, sort, reverse))
+        return -1;
+    
+    return open_doc_list(configs, doc_list, rec, color);
 }
 
 

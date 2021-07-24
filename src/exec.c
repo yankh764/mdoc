@@ -25,7 +25,7 @@ int execvp_process(const char *executable, char *const *argv) {
     pid = fork_inf();
 
     /* Child Process */
-    if(pid == 0) { 
+    if(pid == 0) {
         if(execvp_inf(executable, argv))
         /* The exit status of 127 is the value set by the shell 
            when a command is not found and the recommended exit 

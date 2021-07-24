@@ -17,18 +17,19 @@
 
 
 /* Static Functions Prototype */
-static void cleanup(char *, char *);
+static void two_chars_cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
-static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, const unsigned int);
 static void free_and_null(void **);
+static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, 
+                                       const unsigned int);
 
 
 /*
  * Make a small letters copy of str.
  */
 char *small_let_copy(const char *str) {
-	size_t len = strlen(str) + 1;
+	const size_t len = strlen(str) + 1;
 	unsigned int i;
 	char *str_small; /* Small letter copy of str */
 
@@ -64,13 +65,13 @@ int strstr_i(const char *haystack, const char *needle) {
 		else 
 			retval = 0; 
 	}
-	cleanup(haystack_small, needle_small);
+	two_chars_cleanup(haystack_small, needle_small);
 
 	return retval;
 }
 
 
-static void cleanup(char *ptr1, char *ptr2) {
+static void two_chars_cleanup(char *ptr1, char *ptr2) {
 	if(ptr1)
 		free(ptr1);
 	if(ptr2)
@@ -133,7 +134,7 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 	if(!errno)
 		retval = smallest_word_i;
 
-	cleanup(smallest_word, current_word);
+	two_chars_cleanup(smallest_word, current_word);
 	
 	return retval;
 }
@@ -165,8 +166,8 @@ static void free_and_null(void **ptr) {
  * alphabetically, otherwise return 0.
  */
 static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
-	size_t assumed_len = strlen(assumed_smaller);
-	size_t check_len = strlen(word_to_check);
+	const size_t assumed_len = strlen(assumed_smaller);
+	const size_t check_len = strlen(word_to_check);
 	size_t min_len, i;
 
 	min_len = (assumed_len < check_len) ? assumed_len : check_len; 

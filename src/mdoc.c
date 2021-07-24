@@ -17,6 +17,11 @@
 #include "informative.h"
 #include "mdoc.h"
 
+#define ANSI_COLOR_RED    "\x1b[31m"
+#define ANSI_COLOR_BLUE   "\x1b[34m"
+#define ANSI_COLOR_GREEN  "\x1b[32m"
+#define ANSI_COLOR_RESET  "\x1b[0m"
+
 
 /* To indicate if an previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
@@ -29,7 +34,10 @@ static struct l_list *get_last_node(struct l_list *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
+static void adjust_current_node_val(struct l_list *, const char *, const size_t); 
 static void print_docs_colorful(const struct l_list *);
+static bool dot_entry(const char *); 
+static int check_save_doc_name(const char *, const char *, const bool);
 static void print_docs_no_color(const struct l_list *);
 static void save_l_list_obj(const struct l_list *, char **);
 static unsigned int get_argc_val(const char *);
@@ -51,9 +59,9 @@ static struct l_list *alloc_l_list_obj(const size_t obj_size) {
 	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
-	if((ptr = alloc_l_list()) 
-	 && (ptr->obj = malloc_inf(sizeof(char) * obj_size)))
-		retval = ptr;
+	if((ptr = alloc_l_list()))
+		if((ptr->obj = malloc_inf(sizeof(char) * obj_size)))
+			retval = ptr;
 
 	if(!retval && ptr)
 		free(ptr);
@@ -104,6 +112,16 @@ static struct l_list *get_last_node(struct l_list *ptr) {
 
 
 /*
+ * Return 1 if the entry is a dot directory, otherwise 0.
+ */
+static bool dot_entry(const char *entry_name) 
+{
+	return (strcmp(entry_name, ".") == 0
+			|| strcmp(entry_name, "..") == 0);
+}
+
+
+/*
  * The function will search dor the passed str sequence in dir_path
  * then it will save the founded ones in the linked list. If str is NULL
  * it'll save all the docs to the linked list.
@@ -129,9 +147,7 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
-			/* Skip current and pervious directory entries */
-			if(strcmp(entry->d_name, ".") == 0 
-			 || strcmp(entry->d_name, "..") == 0)
+			if(dot_entry(entry->d_name)) 
 				continue;
 			
 			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
@@ -158,18 +174,12 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			free_and_null((void **) &new_path);
 
 			if(S_ISREG(stbuf.st_mode)) {
-			/* If str is NULL, save every file name to the linked list */
-				if(str) {
-					if(ignore_case) {
-						if((ret = strstr_i(entry->d_name, str)) == -1)
-							break;
-						else if(ret == 0)
-							continue;
-					}
-					else 
-						if(!strstr(entry->d_name, str))
-							continue;
-				}
+				ret = check_save_doc_name(entry->d_name, str, ignore_case);
+				
+				if(ret == -1)
+					break;
+				else if(ret == 0)
+					continue;
 
 				len = strlen(entry->d_name) + 1;
 				
@@ -182,10 +192,8 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 				else
 					if(!(current_node = current_node->next = alloc_l_list_obj(len)))
 						break;
-		
-				snprintf(current_node->obj, len, "%s", entry->d_name);
-				/* Mark the next node as empty in case the current one is the last */
-				current_node->next = NULL;
+				
+				adjust_current_node_val(current_node, entry->d_name, len);
 			}
 		}
 	if(errno || prev_error)
@@ -197,6 +205,36 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
 	
 	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
+}
+
+/*
+ * Pass doc_name to current_node->obj and terminate current_node->next.
+ */
+static void adjust_current_node_val(struct l_list *current_node, 
+                                    const char *doc_name, const size_t len) {
+	snprintf(current_node->obj, len, "%s", doc_name);
+	
+	/* Mark the next node as empty in case the current one is the last */
+	current_node->next = NULL;
+}
+
+
+/* Check if to save the document name to the document list.
+ * Return 1 for yes, 0 for no and -1 for error.
+ */
+static int check_save_doc_name(const char *doc_name, 
+                               const char *str, const bool ignore_case) {
+	/* If str is NULL, save every 
+	   file name to the linked list */
+	if(!str)
+		return 1;
+	
+	if(ignore_case)
+		return strstr_i(doc_name, str);
+
+	else
+		return (strstr(doc_name, str) != NULL) ? 
+			1 : 0;
 }
 
 
@@ -283,8 +321,7 @@ char *get_doc_path(const char *dir_path,
 	
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
-			if(strcmp(entry->d_name, ".") == 0 
-			 || strcmp(entry->d_name, "..") == 0)
+			if(dot_entry(entry->d_name))
 				continue;
 
 			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
@@ -363,7 +400,10 @@ void prep_open_doc_argv(char **argv, char *pdf_viewer,
 
 	if(add_args)
 		for(; (ret = space_to_null(add_args)); add_args+=ret)
-			argv[i++] = add_args;
+			/* In case someone wrote more than one space; 
+			   which will lead to a segmentation fault */
+			if(*add_args != '\0')
+				argv[i++] = add_args;
 	
 	argv[i++] = doc_path;
 	argv[i] = NULL;
@@ -511,7 +551,7 @@ void display_help(const char *name) {
 	       " -a \t\t Include all documents.\n"
 	       " -i \t\t Ignore case distinctions while searching for the documents.\n"
 	       " -n \t\t Allow numerous documents opening (execution).\n"
-		   " -c \t\t Count the existing documents with the passed string sequence.\n"
+	       " -c \t\t Count the existing documents with the passed string sequence.\n"
 	       " -l \t\t List the existing documents with the passed string sequence.\n"
 	       " -o \t\t Open the founded document with the passed string sequence.\n"
 	       " -R \t\t Disable recursive searching for the documents.\n"
@@ -520,13 +560,18 @@ void display_help(const char *name) {
 		   "\n\n"
 	       
 		   "NOTES:\n"
+	       "  1. When generating the configurations, if it's desired to pass additional\n"
+		   "     arguments for the documents execution command, please separate them with\n"
+		   "     a space. Example: --agr1 --arg2 --arg3...\n"
+		   
+		   "\n"
 
-	       "  1. You can use the -a optoin with the -c, -l and -o options instead\n"
+		   "  2. You can use the -a optoin with the -c, -l and -o options instead\n"
 	       "     of passing an actual argument.\n"
 		   
 		   "\n"
 
-	       "  2. You can use the -n option with the -o option to give the program\n"
+	       "  3. You can use the -n option with the -o option to give the program\n"
 		   "     the approval to open more than one document in a run.\n"
 	      );
 }
