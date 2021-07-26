@@ -25,16 +25,17 @@
 
 /* To indicate if an previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
-bool prev_error;
+bool prev_error = 0;
 
 /* Static Functions Prototype */
+static char *get_doc_path(const char *, const char *, const bool);
 static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(struct l_list *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
-static void adjust_current_node_val(struct l_list *, const char *, const size_t); 
+static void adj_search_for_doc_node_val(struct l_list *, const char *, const size_t); 
 static void print_docs_colorful(const struct l_list *);
 static bool dot_entry(const char *); 
 static int check_save_doc_name(const char *, const char *, const bool);
@@ -47,8 +48,15 @@ static void *alloc_l_list();
 static int open_founded_doc_path(struct users_configs *, char *);
 static int open_doc(char *const *);
 static void print_opening_doc(const char *, const bool);
+static struct l_list *search_for_doc(const char *, const char *, 
+                                     const bool, const bool);
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
                                             struct l_list *);
+static void init_search_for_doc_ptrs(struct l_list **, struct l_list **,
+                                     struct l_list **, struct l_list **,
+									 char **);
+static void search_for_doc_multi_dir_err(struct l_list **);
+static void free_and_null_l_list(struct l_list **ptr);
 
 
 /*
@@ -112,12 +120,24 @@ static struct l_list *get_last_node(struct l_list *ptr) {
 
 
 /*
- * Return 1 if the entry is a dot directory, otherwise 0.
+ * Return 1 if the entry is a dot directory 
+ * (aka: ".." and "."), otherwise 0.
  */
 static bool dot_entry(const char *entry_name) 
 {
-	return (strcmp(entry_name, ".") == 0
-			|| strcmp(entry_name, "..") == 0);
+	return (strcmp(entry_name, ".") == 0 ||
+			strcmp(entry_name, "..") == 0);
+}
+
+
+static void init_search_for_doc_ptrs(struct l_list **ptr1, struct l_list **ptr2,
+                                     struct l_list **ptr3, struct l_list **ptr4,
+									 char **char_ptr) {
+	*ptr1 = NULL;
+	*ptr2 = NULL;
+	*ptr3 = NULL;
+	*ptr4 = NULL;
+	*char_ptr = NULL;
 }
 
 
@@ -126,8 +146,8 @@ static bool dot_entry(const char *entry_name)
  * then it will save the founded ones in the linked list. If str is NULL
  * it'll save all the docs to the linked list.
  */
-struct l_list *search_for_doc(const char *dir_path, const char *str, 
-                              const bool ignore_case, const bool recursive) {
+static struct l_list *search_for_doc(const char *dir_path, const char *str, 
+                                     const bool ignore_case, const bool recursive) {
 	struct l_list *current_node_rec, *current_node;;
 	/* The begnning of the documents list that is 
 	   created, filled and returned by the recursion */
@@ -141,10 +161,9 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	int ret;
 	DIR *dp;
 
-	/* Initialize pointers */
-	doc_list_rec_begin = doc_list_begin = current_node_rec = current_node = NULL;
-	new_path = NULL;
-
+	init_search_for_doc_ptrs(&doc_list_rec_begin, &doc_list_begin,
+	                         &current_node_rec, &current_node, &new_path);
+	
 	if((dp = opendir_inf(dir_path)))
 		while((entry = readdir_inf(dp))) {
 			if(dot_entry(entry->d_name)) 
@@ -173,14 +192,9 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 			}
 			free_and_null((void **) &new_path);
 
-			if(S_ISREG(stbuf.st_mode)) {
-				ret = check_save_doc_name(entry->d_name, str, ignore_case);
-				
-				if(ret == -1)
-					break;
-				else if(ret == 0)
-					continue;
-
+			if(S_ISREG(stbuf.st_mode) 
+			 && (ret = check_save_doc_name(entry->d_name, 
+			                               str, ignore_case)) == 1) {
 				len = strlen(entry->d_name) + 1;
 				
 				if(!doc_list_begin) {
@@ -193,8 +207,10 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 					if(!(current_node = current_node->next = alloc_l_list_obj(len)))
 						break;
 				
-				adjust_current_node_val(current_node, entry->d_name, len);
+				adj_search_for_doc_node_val(current_node, entry->d_name, len);
 			}
+			else if(ret == -1)
+				break;
 		}
 	if(errno || prev_error)
 		search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
@@ -207,11 +223,12 @@ struct l_list *search_for_doc(const char *dir_path, const char *str,
 	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
 }
 
+
 /*
  * Pass doc_name to current_node->obj and terminate current_node->next.
  */
-static void adjust_current_node_val(struct l_list *current_node, 
-                                    const char *doc_name, const size_t len) {
+static void adj_search_for_doc_node_val(struct l_list *current_node, 
+                                        const char *doc_name, const size_t len) {
 	snprintf(current_node->obj, len, "%s", doc_name);
 	
 	/* Mark the next node as empty in case the current one is the last */
@@ -268,7 +285,9 @@ static void search_for_doc_error(char *char_ptr,
 	if(*l_list_ptr2)
 		free_l_list(*l_list_ptr2);
 
-	*l_list_ptr1 = *l_list_ptr2 = NULL;
+	*l_list_ptr1 = NULL;
+	*l_list_ptr2 = NULL;
+
 	prev_error = true;
 }
 
@@ -309,9 +328,9 @@ unsigned int count_l_list_nodes(const struct l_list *ptr) {
 /*
  * This function will be used only when count_l_list_nodes() returns 1.
  */
-char *get_doc_path(const char *dir_path, 
-                   const char *full_doc_name, 
-                   const bool recursive) {
+static char *get_doc_path(const char *dir_path, 
+                          const char *full_doc_name, 
+				          const bool recursive) {
 	char *new_path, *ret_path; /* ret_path is the returned path from the recursion */
 	struct dirent *entry;
 	struct stat stbuf;
@@ -535,15 +554,68 @@ void reverse_l_list_obj(struct l_list *ptr) {
 }
 
 
+/*
+ * The same as search_for_doc() but with multiple documents directory support.
+ */
+struct l_list *search_for_doc_multi_dir(const char *dirs_path, const char *str, 
+                                        const bool ignore_case, const bool rec) {
+	struct l_list *doc_list_begin = NULL;
+	struct l_list *current_node;
+	char *dirs_path_cp; 
+	char *current_addr;
+	unsigned int ret;
+
+	if((dirs_path_cp = strcpy_dynamic(dirs_path))) {
+		current_addr = dirs_path_cp;
+		/* Split dirs_path into one dir path at a time by 
+		   converting each space with a null byte   */
+		for(; (ret = space_to_null(current_addr)); current_addr+=ret)
+			if(*dirs_path != '\0') {
+				if(!doc_list_begin) {
+					if((doc_list_begin = search_for_doc(current_addr, str, ignore_case, rec)))
+						current_node = get_last_node(doc_list_begin);
+				}
+				else
+					if((current_node->next = search_for_doc(current_addr, str, ignore_case, rec)))
+						current_node = get_last_node(current_node->next);
+
+				if(prev_error) {
+					search_for_doc_multi_dir_err(&doc_list_begin);
+					break;
+				}
+			}
+		free(dirs_path_cp);
+	}
+
+	return doc_list_begin;
+}
+
+
+static void free_and_null_l_list(struct l_list **ptr) {
+	free_l_list(*ptr);
+	*ptr = NULL;
+}
+
+
+static void search_for_doc_multi_dir_err(struct l_list **doc_list) {
+	if(doc_list)
+		free_and_null_l_list(doc_list);
+}
+
+
+/*char *get_doc_path_multi_dir(char *) {
+	;
+}*/
+
+
 void display_help(const char *name) {
 	printf("Usage: %s  <options>  [argument]\n", name);
 	printf(
-	       "A command-line tool for managing your documents and easing your life."
+	       "A command-line tool for managing your documents and easing your life.\n"
 	       
-		   "\n\n"
+		   "\n"
 		   
 		   "Available options:\n"
-
 	       " -h \t\t Display this help message.\n"
 	       " -g \t\t Generate new configurations file.\n"
 	       " -s \t\t Sort the founded documents alphabetically.\n"
@@ -560,18 +632,26 @@ void display_help(const char *name) {
 		   "\n\n"
 	       
 		   "NOTES:\n"
-	       "  1. When generating the configurations, if it's desired to pass additional\n"
+		   "  1. It's good to note that the program has multiple directories support when\n"
+           "     searching for a document. So when you generate the configurations you can\n"
+		   "     pass more than one directory absolute path which the program will search for\n"
+		   "     documents in them at a run time. Please separate the paths with a space.\n"
+		   "     Example: /path/to/dir1 /path/to/dir2 /path/to/dir3...\n"
+
+           "\n"
+
+	       "  2. When generating the configurations, if it's desired to pass additional\n"
 		   "     arguments for the documents execution command, please separate them with\n"
 		   "     a space. Example: --agr1 --arg2 --arg3...\n"
 		   
 		   "\n"
 
-		   "  2. You can use the -a optoin with the -c, -l and -o options instead\n"
+		   "  3. You can use the -a optoin with the -c, -l and -o options instead\n"
 	       "     of passing an actual argument.\n"
 		   
 		   "\n"
 
-	       "  3. You can use the -n option with the -o option to give the program\n"
+	       "  4. You can use the -n option with the -o option to give the program\n"
 		   "     the approval to open more than one document in a run.\n"
 	      );
 }

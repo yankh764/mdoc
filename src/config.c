@@ -29,15 +29,17 @@ static void null_users_configs(struct users_configs *);
 static char *get_line_inf(FILE *stream) {
 	char *retval;
 
-	if(!(retval = get_line(stream)))
+	if(!(retval = get_line(stream))) {
 		fprintf(stderr, "%s: an necessary input is missing\n", prog_name_inf);
+		fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
+	}
 
 	return retval;
 }
 
 
 static char *input_docs_dir_path() {
-	printf("Please enter your documents directory absolute path: ");
+	printf("Please enter your documents directories absolute path: ");
 
 	return get_line_inf(stdin);
 }

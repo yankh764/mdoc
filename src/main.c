@@ -102,7 +102,7 @@ static int count_opt(const char *str, const bool ignore,
     int retval = -1;
 
     if((configs = get_configs())) {
-        doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec);
+        doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec);
         
         if(!prev_error) {
             print_docs_num(doc_list, color);
@@ -145,7 +145,7 @@ static int list_opt(const char *str, const bool ignore, const bool rec,
     int retval = -1;
     
     if((configs = get_configs())) {
-        if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec)))
+        if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
             if(!(retval = rearrange_if_needed(doc_list, sort, reverse)))
                 display_docs(doc_list, color);
         
@@ -164,13 +164,13 @@ static int open_opt(const char *str, const bool ignore, const bool rec,
     int retval = -1;
     
     if((configs = get_configs())) {
-        if((doc_list = search_for_doc(configs->docs_dir_path, str, ignore, rec))) {
+        if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec))) {
             if(numerous)
                 retval = numerous_opening(configs, doc_list, rec, color, sort, reverse);
             
             else if(count_l_list_nodes(doc_list) == 1)
                 retval = open_doc_list(configs, doc_list, rec, color);
-            
+
             else 
                 big_docs_num_error();   
         }
@@ -180,7 +180,7 @@ static int open_opt(const char *str, const bool ignore, const bool rec,
             
         opts_cleanup(configs, doc_list);
     }
-    
+
     return retval;
 }
 

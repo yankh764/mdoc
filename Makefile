@@ -30,5 +30,5 @@ clean:
 install:
 	install ./$(BIN) $(DST)
 
-uninstall: 
+uninstall: clean
 	$(RM) $(DST)
