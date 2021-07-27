@@ -48,6 +48,8 @@ static void *alloc_l_list();
 static int open_founded_doc_path(struct users_configs *, char *);
 static int open_doc(char *const *);
 static void print_opening_doc(const char *, const bool);
+static unsigned int prep_add_args(char **, char *, unsigned int);
+static char *get_doc_path_multi_dir(const char *, const char *, const bool);
 static struct l_list *search_for_doc(const char *, const char *, 
                                      const bool, const bool);
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
@@ -125,8 +127,8 @@ static struct l_list *get_last_node(struct l_list *ptr) {
  */
 static bool dot_entry(const char *entry_name) 
 {
-	return (strcmp(entry_name, ".") == 0 ||
-			strcmp(entry_name, "..") == 0);
+	return (strcmp(entry_name, ".") == 0
+			|| strcmp(entry_name, "..") == 0);
 }
 
 
@@ -410,22 +412,34 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-void prep_open_doc_argv(char **argv, char *pdf_viewer, 
-                        char *add_args, char *doc_path) {
+void prep_open_doc_argv(char **argv, const char *pdf_viewer, 
+                        char *add_args, const char *doc_path) {
 	unsigned int i = 0;
-	unsigned int ret;
 
-	argv[i++] = pdf_viewer;
+	argv[i++] = (char *) pdf_viewer;
 
 	if(add_args)
-		for(; (ret = space_to_null(add_args)); add_args+=ret)
-			/* In case someone wrote more than one space; 
-			   which will lead to a segmentation fault */
-			if(*add_args != '\0')
-				argv[i++] = add_args;
-	
-	argv[i++] = doc_path;
+		i = prep_add_args(argv, add_args, i);
+
+	argv[i++] = (char *) doc_path;
 	argv[i] = NULL;
+}
+
+
+/*
+ * Prepare the additional arguments in the argv and return the index
+ * of the next i.
+ */
+static unsigned int prep_add_args(char **argv, char *add_args, unsigned int i) {
+	unsigned int ret;
+
+	for(; (ret = space_to_null(add_args)); add_args+=ret)
+		/* In case someone wrote more than one space;
+		   which will lead to a segmentation fault */
+		if(*add_args != '\0')
+			argv[i++] = add_args;
+
+	return i;
 }
 
 
@@ -443,7 +457,7 @@ int open_doc_list(struct users_configs *configs,
 	int retval = 0;
 
 	for(; !retval && ptr; ptr=ptr->next) {
-		if((doc_path = get_doc_path(configs->docs_dir_path, ptr->obj, rec))) {
+		if((doc_path = get_doc_path_multi_dir(configs->docs_dir_path, ptr->obj, rec))) {
 			if(!(retval = open_founded_doc_path(configs, doc_path)))
 				print_opening_doc(ptr->obj, color);
 			
@@ -458,7 +472,7 @@ int open_doc_list(struct users_configs *configs,
 
 
 static int open_founded_doc_path(struct users_configs *configs, char *doc_path) {
-    unsigned int argc = get_argc_val(configs->add_args);
+    const unsigned int argc = get_argc_val(configs->add_args);
     char *argv[argc+1];
 
     prep_open_doc_argv(argv, configs->pdf_viewer, configs->add_args, doc_path);
@@ -570,7 +584,7 @@ struct l_list *search_for_doc_multi_dir(const char *dirs_path, const char *str,
 		/* Split dirs_path into one dir path at a time by 
 		   converting each space with a null byte   */
 		for(; (ret = space_to_null(current_addr)); current_addr+=ret)
-			if(*dirs_path != '\0') {
+			if(*current_addr != '\0') {
 				if(!doc_list_begin) {
 					if((doc_list_begin = search_for_doc(current_addr, str, ignore_case, rec)))
 						current_node = get_last_node(doc_list_begin);
@@ -603,9 +617,28 @@ static void search_for_doc_multi_dir_err(struct l_list **doc_list) {
 }
 
 
-/*char *get_doc_path_multi_dir(char *) {
-	;
-}*/
+static char *get_doc_path_multi_dir(const char *dirs_path, 
+                                    const char *full_doc_name, 
+                                    const bool rec) {
+	char *doc_path = NULL;
+	char *dirs_path_cp;
+	char *current_addr;
+	unsigned int ret;
+	
+	if((dirs_path_cp = strcpy_dynamic(dirs_path))) {
+		current_addr = dirs_path_cp;
+		/* Split dirs_path into one dir path at a time
+		   by converting each space with a null byte   */
+		for(; (ret = space_to_null(current_addr)) && !prev_error; current_addr+=ret)
+			if(*current_addr != '\0')
+				if((doc_path = get_doc_path(current_addr, full_doc_name, rec)))
+					break;
+		
+		free(dirs_path_cp);
+	}
+
+	return doc_path;
+}
 
 
 void display_help(const char *name) {

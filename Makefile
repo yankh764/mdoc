@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O2 -march=native -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
+CFLAGS = -O2 -pipe -march=native -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
 
 BIN ?= mdoc
 DST ?= /usr/local/bin/$(BIN)
@@ -12,12 +12,16 @@ SRCS := $(shell find $(SRCDIR) -iname "*.c")
 OBJS := $(SRCS:%=$(OBJDIR)/%.o)
 
 
-$(OBJDIR)/$(BIN): $(OBJS)
+$(OBJDIR)/%.c.o: %.c make_dir
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+generate_bin: $(OBJS)
 	$(CC) $(OBJS) -o ./$(BIN) $(LDFLAGS)
 
-$(OBJDIR)/%.c.o: %.c
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+
+make_dir:
+	mkdir -p $(OBJDIR)/$(SRCDIR)
 
 
 .PHONY: clean install uninstall

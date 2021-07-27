@@ -49,7 +49,7 @@ static char *get_config_path() {
     if((home = getenv_inf("HOME"))) {
         len = strlen(config) + strlen(home) + 2;
         
-        if((config_path = malloc_inf(len)))
+        if((config_path = malloc_inf(sizeof(char) * len)))
             snprintf(config_path, len, "%s/%s", home, config);
     }
 

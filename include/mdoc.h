@@ -14,7 +14,7 @@ struct l_list {
 };
 
 
-void prep_open_doc_argv(char **, char *, char *, char *);
+void prep_open_doc_argv(char **, const char *, char *, const char *);
 int sort_docs_alpha(struct l_list *);
 void free_l_list(struct l_list *);
 void display_docs(const struct l_list *, const bool);
