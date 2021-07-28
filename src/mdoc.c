@@ -55,10 +55,11 @@ static struct l_list *search_for_doc(const char *, const char *,
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
                                             struct l_list *);
 static void init_search_for_doc_ptrs(struct l_list **, struct l_list **,
-                                     struct l_list **, struct l_list **,
-									 char **);
+                                     struct l_list **, struct l_list **, char **);
 static void search_for_doc_multi_dir_err(struct l_list **);
 static void free_and_null_l_list(struct l_list **ptr);
+static void *alloc_stat();
+static struct stat *get_stat(const char *);
 
 
 /*
@@ -629,16 +630,40 @@ static char *get_doc_path_multi_dir(const char *dirs_path,
 		current_addr = dirs_path_cp;
 		/* Split dirs_path into one dir path at a time
 		   by converting each space with a null byte   */
-		for(; (ret = space_to_null(current_addr)) && !prev_error; current_addr+=ret)
-			if(*current_addr != '\0')
+		for(; (ret = space_to_null(current_addr)); current_addr+=ret)
+			if(*current_addr != '\0') {
 				if((doc_path = get_doc_path(current_addr, full_doc_name, rec)))
 					break;
+				
+				else if(prev_error)
+					break;
+			}
 		
 		free(dirs_path_cp);
 	}
 
 	return doc_path;
 }
+
+
+static void *alloc_stat() 
+{
+	return malloc_inf(sizeof(struct stat));
+}
+
+
+static struct stat *get_stat(const char *path) {
+	struct stat *statbuf;
+
+	if((statbuf = alloc_stat()))
+		if(!stat_inf(path, statbuf))
+			free_and_null((void **) statbuf);
+
+	return statbuf;
+}
+
+
+
 
 
 void display_help(const char *name) {
@@ -658,7 +683,8 @@ void display_help(const char *name) {
 	       " -n \t\t Allow numerous documents opening (execution).\n"
 	       " -c \t\t Count the existing documents with the passed string sequence.\n"
 	       " -l \t\t List the existing documents with the passed string sequence.\n"
-	       " -o \t\t Open the founded document with the passed string sequence.\n"
+	       " -d \t\t Display details on the documents with the passed string sequence.\n"
+		   " -o \t\t Open the founded document with the passed string sequence.\n"
 	       " -R \t\t Disable recursive searching for the documents.\n"
 	       " -C \t\t Disable colorful output.\n"
            
@@ -666,9 +692,9 @@ void display_help(const char *name) {
 	       
 		   "NOTES:\n"
 		   "  1. It's good to note that the program has multiple directories support when\n"
-           "     searching for a document. So when you generate the configurations you can\n"
-		   "     pass more than one directory absolute path which the program will search for\n"
-		   "     documents in them at a run time. Please separate the paths with a space.\n"
+           "     searching for a document. So when generating the configurations you can pass\n"
+		   "     more than one directory absolute path which the program will search for\n"
+		   "     documents in it at a run time. Please separate the paths with a space.\n"
 		   "     Example: /path/to/dir1 /path/to/dir2 /path/to/dir3...\n"
 
            "\n"
@@ -679,12 +705,13 @@ void display_help(const char *name) {
 		   
 		   "\n"
 
-		   "  3. You can use the -a optoin with the -c, -l and -o options instead\n"
-	       "     of passing an actual argument.\n"
+		   "  3. By default when using the -o option you can't open more than a document\n"
+		   "     in a run, but you can use the -n option with it to give the program the\n"
+		   "     approval to open more than one document in a run.\n"
 		   
 		   "\n"
-
-	       "  4. You can use the -n option with the -o option to give the program\n"
-		   "     the approval to open more than one document in a run.\n"
-	      );
+		   
+		   "  4. You can use the -a optoin with the -c, -d, -l and -o options instead\n"
+	       "     of passing an actual argument.\n" 
+		  );
 }

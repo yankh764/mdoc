@@ -29,10 +29,8 @@ static void null_users_configs(struct users_configs *);
 static char *get_line_inf(FILE *stream) {
 	char *retval;
 
-	if(!(retval = get_line(stream))) {
+	if(!(retval = get_line(stream)))
 		fprintf(stderr, "%s: an necessary input is missing\n", prog_name_inf);
-		fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
-	}
 
 	return retval;
 }
@@ -69,7 +67,7 @@ static struct users_configs *input_configs() {
     struct users_configs *input;
 
 	if((input = alloc_users_configs())) {
-		input->docs_dir_path = input->pdf_viewer = input->add_args = NULL;
+		null_users_configs(input);
 	
 		if(!(input->docs_dir_path = input_docs_dir_path())) 
 			goto Out;
@@ -78,7 +76,8 @@ static struct users_configs *input_configs() {
 			goto Out;
 		
 		/* Only fail if error detected since it's optional secition */
-		if(!(input->add_args = input_add_args()) && errno)
+		input->add_args = input_add_args();
+		if(errno)
 			goto Out;
 
 		retval = input;

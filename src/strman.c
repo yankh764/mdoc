@@ -208,8 +208,9 @@ unsigned int count_words(const char *line) {
 	for(i=0, words=0; line[i]!='\n' && line[i]!='\0'; i++) {
 		if(isspace(line[i]))
 			inside = 0;
+		
 		else {
- 			if(!inside)
+ 			if(!inside) 
 				words++;
 			
 			inside = 1;
@@ -222,8 +223,7 @@ unsigned int count_words(const char *line) {
 
 /*
  * Replace each space (white character) with a null byte 
- * and return the number of characters before this 
- * encountered white char.
+ * and return the index of the next char.
  */
 unsigned int space_to_null(char *text) {
 	unsigned int i;

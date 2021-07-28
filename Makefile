@@ -12,16 +12,13 @@ SRCS := $(shell find $(SRCDIR) -iname "*.c")
 OBJS := $(SRCS:%=$(OBJDIR)/%.o)
 
 
-$(OBJDIR)/%.c.o: %.c make_dir
-	$(CC) $(CFLAGS) -c $< -o $@
-
-
 generate_bin: $(OBJS)
 	$(CC) $(OBJS) -o ./$(BIN) $(LDFLAGS)
 
 
-make_dir:
-	mkdir -p $(OBJDIR)/$(SRCDIR)
+$(OBJDIR)/%.c.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 
 .PHONY: clean install uninstall
