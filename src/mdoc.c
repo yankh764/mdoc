@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include "exec.h"
 #include "input.h"
 #include "strman.h"
@@ -27,11 +28,21 @@
    that could overwrite errno with 0 (success) before returning */
 bool prev_error = 0;
 
+/* 
+ * A struct for printing the properiet size format 
+ * and unit name for the document size.
+ */
+struct meas_unit {
+	off_t size_format;
+	const char *unit_name;
+};
+
+
 /* Static Functions Prototype */
 static char *get_doc_path(const char *, const char *, const bool);
 static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
-static struct l_list *get_last_node(struct l_list *);
+static struct l_list *get_last_node(const struct l_list *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
@@ -43,13 +54,10 @@ static void print_docs_no_color(const struct l_list *);
 static void save_l_list_obj(const struct l_list *, char **);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
-static void reorganize_l_list_alpha(struct l_list *, char *const *);
+static void reorganize_l_list_alpha(struct l_list *, char **);
 static void *alloc_l_list();
-static int open_founded_doc_path(struct users_configs *, char *);
 static int open_doc(char *const *);
-static void print_opening_doc(const char *, const bool);
 static unsigned int prep_add_args(char **, char *, unsigned int);
-static char *get_doc_path_multi_dir(const char *, const char *, const bool);
 static struct l_list *search_for_doc(const char *, const char *, 
                                      const bool, const bool);
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
@@ -60,6 +68,15 @@ static void search_for_doc_multi_dir_err(struct l_list **);
 static void free_and_null_l_list(struct l_list **ptr);
 static void *alloc_stat();
 static struct stat *get_stat(const char *);
+static void print_docs_num_color(const struct l_list *);
+static void print_docs_num_no_color(const struct l_list *);
+static void print_opening_doc_color(const char *);
+static void print_opening_doc_no_color(const char *);
+static struct l_list *search_for_doc_multi_dir_split(char *, const char *,
+		                                             const bool, const bool);
+static char *get_doc_path_multi_dir_split(char *, const char *, const bool);
+static void print_doc_size(const off_t);
+static struct meas_unit get_proper_size_format(const off_t);
 
 
 /*
@@ -112,11 +129,11 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
 }
 
 
-static struct l_list *get_last_node(struct l_list *ptr) {
+static struct l_list *get_last_node(const struct l_list *ptr) {
 	struct l_list *prev;
 
 	for(; ptr; ptr=ptr->next)
-		prev = ptr;
+		prev = (struct l_list *) ptr;
 
 	return prev;
 }
@@ -128,8 +145,8 @@ static struct l_list *get_last_node(struct l_list *ptr) {
  */
 static bool dot_entry(const char *entry_name) 
 {
-	return (strcmp(entry_name, ".") == 0
-			|| strcmp(entry_name, "..") == 0);
+	return (strcmp(entry_name, ".") == 0 ||
+		    strcmp(entry_name, "..") == 0);
 }
 
 
@@ -151,7 +168,7 @@ static void init_search_for_doc_ptrs(struct l_list **ptr1, struct l_list **ptr2,
  */
 static struct l_list *search_for_doc(const char *dir_path, const char *str, 
                                      const bool ignore_case, const bool recursive) {
-	struct l_list *current_node_rec, *current_node;;
+	struct l_list *current_node_rec, *current_node;
 	/* The begnning of the documents list that is 
 	   created, filled and returned by the recursion */
 	struct l_list *doc_list_rec_begin;
@@ -195,26 +212,29 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 			}
 			free_and_null((void **) &new_path);
 
-			if(S_ISREG(stbuf.st_mode) 
-			 && (ret = check_save_doc_name(entry->d_name, 
-			                               str, ignore_case)) == 1) {
-				len = strlen(entry->d_name) + 1;
+			if(S_ISREG(stbuf.st_mode)) {
+				if((ret = check_save_doc_name(entry->d_name, 
+			                                  str, ignore_case)) == 1) {
+					len = strlen(entry->d_name) + 1;
 				
-				if(!doc_list_begin) {
-					if(!(doc_list_begin = alloc_l_list_obj(len)))
-						break;
+					if(!doc_list_begin) {
+						if(!(doc_list_begin = alloc_l_list_obj(len)))
+							break;
 			
-					current_node = doc_list_begin;
-				}
-				else
-					if(!(current_node = current_node->next = alloc_l_list_obj(len)))
-						break;
+						current_node = doc_list_begin;
+					}
+					else
+						if(!(current_node = current_node->next = alloc_l_list_obj(len)))
+							break;
 				
-				adj_search_for_doc_node_val(current_node, entry->d_name, len);
+					adj_search_for_doc_node_val(current_node, entry->d_name, len);
+				}
+				
+				else if(ret == -1)
+					break;
 			}
-			else if(ret == -1)
-				break;
 		}
+	
 	if(errno || prev_error)
 		search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
 
@@ -233,7 +253,6 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 static void adj_search_for_doc_node_val(struct l_list *current_node, 
                                         const char *doc_name, const size_t len) {
 	snprintf(current_node->obj, len, "%s", doc_name);
-	
 	/* Mark the next node as empty in case the current one is the last */
 	current_node->next = NULL;
 }
@@ -328,9 +347,6 @@ unsigned int count_l_list_nodes(const struct l_list *ptr) {
 }
 
 
-/*
- * This function will be used only when count_l_list_nodes() returns 1.
- */
 static char *get_doc_path(const char *dir_path, 
                           const char *full_doc_name, 
 				          const bool recursive) {
@@ -342,6 +358,11 @@ static char *get_doc_path(const char *dir_path,
 	new_path = ret_path = NULL;
 	
 	if((dp = opendir_inf(dir_path)))
+		/* 
+		 * I decided to use goto here so it'll be easier to distinguish
+		 * between the errors (which don't use goto) and the succes when a 
+		 * document path is founded (whiich uses goto).
+		 */
 		while((entry = readdir_inf(dp))) {
 			if(dot_entry(entry->d_name))
 				continue;
@@ -354,26 +375,28 @@ static char *get_doc_path(const char *dir_path,
 			
 			if(S_ISDIR(stbuf.st_mode) && recursive) {
 				if((ret_path = get_doc_path(new_path, full_doc_name, recursive)))
-					break;
+					goto Out;
 				
 				else if(prev_error)
 					break;
 			}
 			else if(S_ISREG(stbuf.st_mode) 
 			 && strstr(new_path, full_doc_name))
-				break;
+				goto Out;
 		
 			free_and_null((void **) &new_path);
 		}
-	/* Catch errors */
+	
 	if(errno || prev_error)
 		get_doc_path_error(&new_path, &ret_path);
 
-	if(dp)
-		if(closedir_inf(dp) && !prev_error)
-			get_doc_path_error(&new_path, &ret_path);
 
-	return get_doc_path_retval(new_path, ret_path);
+	Out:
+		if(dp)
+			if(closedir_inf(dp) && !prev_error)
+				get_doc_path_error(&new_path, &ret_path);
+
+		return get_doc_path_retval(new_path, ret_path);
 }
 
 
@@ -450,29 +473,7 @@ static int open_doc(char *const *argv)
 }
 
 
-int open_doc_list(struct users_configs *configs, 
-                  const struct l_list *doc_list,
-				  const bool rec, const bool color) {
-	const struct l_list *ptr = doc_list;
-	char *doc_path;
-	int retval = 0;
-
-	for(; !retval && ptr; ptr=ptr->next) {
-		if((doc_path = get_doc_path_multi_dir(configs->docs_dir_path, ptr->obj, rec))) {
-			if(!(retval = open_founded_doc_path(configs, doc_path)))
-				print_opening_doc(ptr->obj, color);
-			
-			free(doc_path);
-		}
-		else 
-			retval = -1;
-	}
-	
-	return retval;
-}
-
-
-static int open_founded_doc_path(struct users_configs *configs, char *doc_path) {
+int open_founded_doc_path(struct users_configs *configs, const char *doc_path) {
     const unsigned int argc = get_argc_val(configs->add_args);
     char *argv[argc+1];
 
@@ -493,23 +494,47 @@ static unsigned int get_argc_val(const char *add_args) {
 }
 
 
-static void print_opening_doc(const char *doc_name, const bool color) {
+void print_opening_doc(const char *doc_name, const bool color) {
 	if(color)
-		printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "OPENING" ANSI_COLOR_BLUE "]" 
-               ANSI_COLOR_RED " %s\n" ANSI_COLOR_RESET, 
-               doc_name);
+		print_opening_doc_color(doc_name);
 	else 
-		printf("[OPENING] %s\n", doc_name);
+		print_opening_doc_no_color(doc_name);
+}
+
+
+static void print_opening_doc_color(const char *doc_name)
+{
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "OPENING" ANSI_COLOR_BLUE "]" 
+           ANSI_COLOR_RED " %s\n" ANSI_COLOR_RESET, 
+           doc_name);
+}
+
+
+static void print_opening_doc_no_color(const char *doc_name)
+{
+	printf("[OPENING] %s\n", doc_name);
 }
 
 
 void print_docs_num(const struct l_list *doc_list, const bool color) {
     if(color)
-        printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "COUNTED" ANSI_COLOR_BLUE "]"               
-               ANSI_COLOR_RED " %d Documents\n" ANSI_COLOR_RESET, 
-               count_l_list_nodes(doc_list));
-    else
-        printf("[COUNTED] %d Documents\n", count_l_list_nodes(doc_list));
+		print_docs_num_color(doc_list);
+	else
+		print_docs_num_no_color(doc_list);
+}
+
+
+static void print_docs_num_color(const struct l_list *doc_list)
+{
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "COUNTED" ANSI_COLOR_BLUE "]"
+		   ANSI_COLOR_RED " %d Documents\n" ANSI_COLOR_RESET,
+		   count_l_list_nodes(doc_list));
+}
+
+
+static void print_docs_num_no_color(const struct l_list *doc_list)
+{
+	printf("[COUNTED] %d Documents\n", count_l_list_nodes(doc_list));
 }
 
 
@@ -547,8 +572,7 @@ static void save_l_list_obj(const struct l_list *ptr, char **array) {
 /*
  * Reorganize the linked list's objects alphabetically.
  */
-static void reorganize_l_list_alpha(struct l_list *unsorted_l_list, 
-                                    char *const *sorted_array) {
+static void reorganize_l_list_alpha(struct l_list *unsorted_l_list, char **sorted_array) {
 	struct l_list *ptr = unsorted_l_list;
 	unsigned int i;
 
@@ -574,33 +598,45 @@ void reverse_l_list_obj(struct l_list *ptr) {
  */
 struct l_list *search_for_doc_multi_dir(const char *dirs_path, const char *str, 
                                         const bool ignore_case, const bool rec) {
-	struct l_list *doc_list_begin = NULL;
-	struct l_list *current_node;
+	struct l_list *retval = NULL;
 	char *dirs_path_cp; 
-	char *current_addr;
-	unsigned int ret;
 
 	if((dirs_path_cp = strcpy_dynamic(dirs_path))) {
-		current_addr = dirs_path_cp;
-		/* Split dirs_path into one dir path at a time by 
-		   converting each space with a null byte   */
-		for(; (ret = space_to_null(current_addr)); current_addr+=ret)
-			if(*current_addr != '\0') {
-				if(!doc_list_begin) {
-					if((doc_list_begin = search_for_doc(current_addr, str, ignore_case, rec)))
-						current_node = get_last_node(doc_list_begin);
-				}
-				else
-					if((current_node->next = search_for_doc(current_addr, str, ignore_case, rec)))
-						current_node = get_last_node(current_node->next);
-
-				if(prev_error) {
-					search_for_doc_multi_dir_err(&doc_list_begin);
-					break;
-				}
-			}
+		retval = search_for_doc_multi_dir_split(dirs_path_cp, str, 
+				                                ignore_case, rec);	
 		free(dirs_path_cp);
 	}
+
+	return retval;
+}
+
+
+/* Split dirs_path into one dir path at a time by converting
+ * each space with a null byte, then check for documents with 
+ * the sequence str in them one path at a time.
+ */
+static struct l_list *
+search_for_doc_multi_dir_split(char *dirs_path, const char *str,
+		                       const bool ignore_case, const bool rec) {
+	struct l_list *doc_list_begin = NULL;
+	struct l_list *current_node;
+	unsigned int ret;
+
+	for(; (ret = space_to_null(dirs_path)); dirs_path+=ret)
+		if(*dirs_path != '\0') {
+			if(!doc_list_begin) {
+				if((doc_list_begin = search_for_doc(dirs_path, str, ignore_case, rec)))
+					current_node = get_last_node(doc_list_begin);
+			}
+			else
+				if((current_node->next = search_for_doc(dirs_path, str, ignore_case, rec)))
+					current_node = get_last_node(current_node->next);
+
+			if(prev_error) {
+				search_for_doc_multi_dir_err(&doc_list_begin);
+				break;
+			}
+		}
 
 	return doc_list_begin;
 }
@@ -618,29 +654,35 @@ static void search_for_doc_multi_dir_err(struct l_list **doc_list) {
 }
 
 
-static char *get_doc_path_multi_dir(const char *dirs_path, 
-                                    const char *full_doc_name, 
-                                    const bool rec) {
-	char *doc_path = NULL;
+char *get_doc_path_multi_dir(const char *dirs_path, 
+                             const char *full_doc_name, 
+                             const bool rec) {
+	char *retval = NULL;
 	char *dirs_path_cp;
-	char *current_addr;
-	unsigned int ret;
 	
 	if((dirs_path_cp = strcpy_dynamic(dirs_path))) {
-		current_addr = dirs_path_cp;
-		/* Split dirs_path into one dir path at a time
-		   by converting each space with a null byte   */
-		for(; (ret = space_to_null(current_addr)); current_addr+=ret)
-			if(*current_addr != '\0') {
-				if((doc_path = get_doc_path(current_addr, full_doc_name, rec)))
-					break;
-				
-				else if(prev_error)
-					break;
-			}
-		
+		retval = get_doc_path_multi_dir_split(dirs_path_cp, full_doc_name, rec)	;
 		free(dirs_path_cp);
 	}
+
+	return retval;
+}
+
+
+/* Split dirs_path into one dir path at a time by converting
+ * each space with a null byte, then search for the document
+ * in the dirs paths.
+ */
+static char *get_doc_path_multi_dir_split(char *dirs_path_cp, 
+		                                  const char *full_doc_name,
+										  const bool rec) {
+	char *doc_path = NULL;
+	unsigned int ret;
+	
+	for(; (ret = space_to_null(dirs_path_cp)); dirs_path_cp+=ret)
+		if(*dirs_path_cp != '\0')
+			if((doc_path = get_doc_path(dirs_path_cp, full_doc_name, rec)) || prev_error)
+				break;
 
 	return doc_path;
 }
@@ -663,7 +705,23 @@ static struct stat *get_stat(const char *path) {
 }
 
 
+static struct meas_unit get_proper_size_format(const off_t bytes) {
 
+}
+
+
+static void print_doc_size(const off_t bytes) {
+	const off_t gb = 1000000000;
+	const off_t mb = 1000000;
+	const off_t kb = 1000;
+
+	if(bytes )
+		;//Print in kb
+	else if(bytes >= 100000)
+		;//print in mb
+	else 
+
+}
 
 
 void display_help(const char *name) {

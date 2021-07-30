@@ -38,6 +38,8 @@ static int numerous_opening(struct users_configs *, struct l_list *,
                             const bool, const bool, const bool, const bool);
 static int open_opt(const char *, const bool, const bool, const bool, 
                     const bool, const bool, const bool);
+static int open_doc_list(struct users_configs *, const struct l_list *, 
+                         const bool, const bool);
 
 
 static char *get_config_path() {
@@ -153,6 +155,28 @@ static int list_opt(const char *str, const bool ignore, const bool rec,
     }
 
     return retval;
+}
+
+
+static int open_doc_list(struct users_configs *configs, 
+                         const struct l_list *doc_list,
+			         	 const bool rec, const bool color) {
+	const struct l_list *ptr = doc_list;
+	char *doc_path;
+	int retval = 0;
+
+	for(; (ptr && !retval); ptr=ptr->next) {
+		if((doc_path = get_doc_path_multi_dir(configs->docs_dir_path, ptr->obj, rec))) {
+			if(!(retval = open_founded_doc_path(configs, doc_path)))
+				print_opening_doc(ptr->obj, color);
+			
+			free(doc_path);
+		}
+		else 
+			retval = -1;
+	}
+	
+	return retval;
 }
 
 

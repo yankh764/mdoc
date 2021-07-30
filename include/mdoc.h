@@ -22,9 +22,10 @@ unsigned int count_l_list_nodes(const struct l_list *);
 void reverse_l_list_obj(struct l_list *);
 void print_docs_num(const struct l_list *, const bool);
 void display_help(const char *);
-int open_doc_list(struct users_configs *, const struct l_list *,
-				  const bool, const bool);
-struct l_list *search_for_doc_multi_dir(const char *, const char *, 
-                                        const bool, const bool);
+struct l_list *search_for_doc_multi_dir(const char *, const char *,
+		                                const bool, const bool);
+int open_founded_doc_path(struct users_configs *, const char *);
+char *get_doc_path_multi_dir(const char *, const char *, const bool);
+void print_opening_doc(const char *, const bool);
 
 #endif
