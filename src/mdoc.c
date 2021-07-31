@@ -33,13 +33,13 @@ bool prev_error = 0;
  * and unit name for the document size.
  */
 struct meas_unit {
-	off_t size_format;
+	float size_format;
 	const char *unit_name;
 };
 
 
 /* Static Functions Prototype */
-static char *get_doc_path(const char *, const char *, const bool);
+static char *get_doc_path(const char *, const char *, bool);
 static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(const struct l_list *);
@@ -49,7 +49,7 @@ static char *get_doc_path_retval(char *, char *);
 static void adj_search_for_doc_node_val(struct l_list *, const char *, const size_t); 
 static void print_docs_colorful(const struct l_list *);
 static bool dot_entry(const char *); 
-static int check_save_doc_name(const char *, const char *, const bool);
+static int check_save_doc_name(const char *, const char *, bool);
 static void print_docs_no_color(const struct l_list *);
 static void save_l_list_obj(const struct l_list *, char **);
 static unsigned int get_argc_val(const char *);
@@ -58,12 +58,9 @@ static void reorganize_l_list_alpha(struct l_list *, char **);
 static void *alloc_l_list();
 static int open_doc(char *const *);
 static unsigned int prep_add_args(char **, char *, unsigned int);
-static struct l_list *search_for_doc(const char *, const char *, 
-                                     const bool, const bool);
-static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  
-                                            struct l_list *);
-static void init_search_for_doc_ptrs(struct l_list **, struct l_list **,
-                                     struct l_list **, struct l_list **, char **);
+static struct l_list *search_for_doc(const char *, const char *, bool, bool);
+static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  struct l_list *);
+static void init_search_for_doc_ptrs(struct l_list **, struct l_list **, struct l_list **, struct l_list **, char **);
 static void search_for_doc_multi_dir_err(struct l_list **);
 static void free_and_null_l_list(struct l_list **ptr);
 static void *alloc_stat();
@@ -72,11 +69,20 @@ static void print_docs_num_color(const struct l_list *);
 static void print_docs_num_no_color(const struct l_list *);
 static void print_opening_doc_color(const char *);
 static void print_opening_doc_no_color(const char *);
-static struct l_list *search_for_doc_multi_dir_split(char *, const char *,
-		                                             const bool, const bool);
-static char *get_doc_path_multi_dir_split(char *, const char *, const bool);
-static void print_doc_size(const off_t);
+static struct l_list *search_for_doc_multi_dir_split(char *, const char *, bool, bool);
+static char *get_doc_path_multi_dir_split(char *, const char *, bool);
+static void print_doc_size(const off_t, bool);
 static struct meas_unit get_proper_size_format(const off_t);
+static float bytes_to_gb(off_t); 
+static float bytes_to_mb(off_t);
+static float bytes_to_kb(off_t);
+static struct meas_unit ret_proper_size_format(float, const char *); 
+static void print_doc_size_color(const struct meas_unit);
+static void print_doc_size_no_color(const struct meas_unit);
+static void print_doc_path(const char *, bool);
+static void print_doc_path_no_color(const char *);
+static void print_doc_path_color(const char *);
+
 
 
 /*
@@ -167,7 +173,7 @@ static void init_search_for_doc_ptrs(struct l_list **ptr1, struct l_list **ptr2,
  * it'll save all the docs to the linked list.
  */
 static struct l_list *search_for_doc(const char *dir_path, const char *str, 
-                                     const bool ignore_case, const bool recursive) {
+                                     bool ignore_case, bool recursive) {
 	struct l_list *current_node_rec, *current_node;
 	/* The begnning of the documents list that is 
 	   created, filled and returned by the recursion */
@@ -262,7 +268,7 @@ static void adj_search_for_doc_node_val(struct l_list *current_node,
  * Return 1 for yes, 0 for no and -1 for error.
  */
 static int check_save_doc_name(const char *doc_name, 
-                               const char *str, const bool ignore_case) {
+                               const char *str, bool ignore_case) {
 	/* If str is NULL, save every 
 	   file name to the linked list */
 	if(!str)
@@ -314,7 +320,7 @@ static void search_for_doc_error(char *char_ptr,
 }
 
 
-void display_docs(const struct l_list *ptr, const bool color_status) {
+void display_docs(const struct l_list *ptr, bool color_status) {
 		if(color_status)
 			print_docs_colorful(ptr);
 		else
@@ -349,7 +355,7 @@ unsigned int count_l_list_nodes(const struct l_list *ptr) {
 
 static char *get_doc_path(const char *dir_path, 
                           const char *full_doc_name, 
-				          const bool recursive) {
+				          bool recursive) {
 	char *new_path, *ret_path; /* ret_path is the returned path from the recursion */
 	struct dirent *entry;
 	struct stat stbuf;
@@ -494,7 +500,7 @@ static unsigned int get_argc_val(const char *add_args) {
 }
 
 
-void print_opening_doc(const char *doc_name, const bool color) {
+void print_opening_doc(const char *doc_name, bool color) {
 	if(color)
 		print_opening_doc_color(doc_name);
 	else 
@@ -502,6 +508,11 @@ void print_opening_doc(const char *doc_name, const bool color) {
 }
 
 
+/*
+ * The main reason I chose to follow this method (using another functions)
+ * for printing colored outputs is because to decrease the confusion that
+ * could occur while seeing a printf() call with lots of macros.
+ */
 static void print_opening_doc_color(const char *doc_name)
 {
 	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "OPENING" ANSI_COLOR_BLUE "]" 
@@ -516,7 +527,7 @@ static void print_opening_doc_no_color(const char *doc_name)
 }
 
 
-void print_docs_num(const struct l_list *doc_list, const bool color) {
+void print_docs_num(const struct l_list *doc_list, bool color) {
     if(color)
 		print_docs_num_color(doc_list);
 	else
@@ -597,7 +608,7 @@ void reverse_l_list_obj(struct l_list *ptr) {
  * The same as search_for_doc() but with multiple documents directory support.
  */
 struct l_list *search_for_doc_multi_dir(const char *dirs_path, const char *str, 
-                                        const bool ignore_case, const bool rec) {
+                                        bool ignore_case, bool rec) {
 	struct l_list *retval = NULL;
 	char *dirs_path_cp; 
 
@@ -617,7 +628,7 @@ struct l_list *search_for_doc_multi_dir(const char *dirs_path, const char *str,
  */
 static struct l_list *
 search_for_doc_multi_dir_split(char *dirs_path, const char *str,
-		                       const bool ignore_case, const bool rec) {
+		                       bool ignore_case, bool rec) {
 	struct l_list *doc_list_begin = NULL;
 	struct l_list *current_node;
 	unsigned int ret;
@@ -656,7 +667,7 @@ static void search_for_doc_multi_dir_err(struct l_list **doc_list) {
 
 char *get_doc_path_multi_dir(const char *dirs_path, 
                              const char *full_doc_name, 
-                             const bool rec) {
+                             bool rec) {
 	char *retval = NULL;
 	char *dirs_path_cp;
 	
@@ -675,7 +686,7 @@ char *get_doc_path_multi_dir(const char *dirs_path,
  */
 static char *get_doc_path_multi_dir_split(char *dirs_path_cp, 
 		                                  const char *full_doc_name,
-										  const bool rec) {
+										  bool rec) {
 	char *doc_path = NULL;
 	unsigned int ret;
 	
@@ -706,21 +717,95 @@ static struct stat *get_stat(const char *path) {
 
 
 static struct meas_unit get_proper_size_format(const off_t bytes) {
-
-}
-
-
-static void print_doc_size(const off_t bytes) {
 	const off_t gb = 1000000000;
 	const off_t mb = 1000000;
 	const off_t kb = 1000;
 
-	if(bytes )
-		;//Print in kb
-	else if(bytes >= 100000)
-		;//print in mb
-	else 
+	if(bytes >= gb) 
+		return ret_proper_size_format(bytes_to_gb(bytes), "GB");
 
+	else if(bytes >= mb)
+		return ret_proper_size_format(bytes_to_mb(bytes), "MB");
+
+	else if(bytes >= kb)
+		return ret_proper_size_format(bytes_to_kb(bytes), "KB");
+
+	else 
+		return ret_proper_size_format(bytes, "B");
+}
+
+
+static struct meas_unit ret_proper_size_format(float size_format, 
+	                                           const char *unit_name) {
+	struct meas_unit retval;
+
+	retval.size_format = size_format;
+	retval.unit_name = unit_name;
+
+	return retval; 
+}
+
+
+static float bytes_to_gb(off_t bytes) 
+{
+	return bytes / 1000000000; 
+}
+
+
+static float bytes_to_mb(off_t bytes) 
+{
+	return bytes / 1000000;
+}
+
+
+static float bytes_to_kb(off_t bytes) 
+{
+	return bytes / 1000;
+}
+
+
+static void print_doc_size(const off_t bytes, bool color) {
+	const struct meas_unit format = get_proper_size_format(bytes);
+
+	if(color)
+		print_doc_size_color(format);
+	else
+		print_doc_size_no_color(format);
+}
+
+
+static void print_doc_size_color(const struct meas_unit format) 
+{
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "SIZE" ANSI_COLOR_BLUE "]"
+		   ANSI_COLOR_RED " %0.1f %s\n" ANSI_COLOR_RESET, 
+		   format.size_format, format.unit_name);
+}
+
+
+static void print_doc_size_no_color(const struct meas_unit format) 
+{
+	printf("[SIZE] %0.1f %s\n", format.size_format, format.unit_name);	
+} 
+
+
+static void print_doc_path(const char *doc_path, bool color) {
+	if(color)
+		print_doc_path_color(doc_path);	
+	else
+		print_doc_path_no_color(doc_path);
+}
+
+
+static void print_doc_path_color(const char *doc_path)
+{
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "PATH" ANSI_COLOR_BLUE "]"
+		   ANSI_COLOR_RED " %s\n" ANSI_COLOR_RESET, doc_path);
+}
+
+
+static void print_doc_path_no_color(const char *doc_path)
+{
+	printf("[PATH] %s\n", doc_path);
 }
 
 

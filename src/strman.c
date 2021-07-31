@@ -238,13 +238,16 @@ unsigned int space_to_null(char *text) {
 }
 
 
+/*
+ * I decided to use memcpy() instead of strncpy() just 
+ * because I like it more.
+ */
 char *strcpy_dynamic(const char *src) {
 	const size_t len = strlen(src) + 1;
 	char *src_cpy;
 
 	if((src_cpy = malloc_inf(sizeof(char) * len)))
-		strncpy(src_cpy, src, len);
+		memcpy(src_cpy, src, len);
 
 	return src_cpy;
 }
-

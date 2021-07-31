@@ -27,19 +27,15 @@ static void missing_arg_err(const int);
 static void invalid_arg_err(const int);
 static int generate_opt();
 static struct users_configs *get_configs();
-static int count_opt(const char *, const bool, const bool, const bool);
+static int count_opt(const char *, bool, bool, bool);
 static void opts_cleanup(struct users_configs *, struct l_list *);
 static void big_docs_num_error();
 static void small_docs_num_error();
-static int rearrange_if_needed(struct l_list *, const bool, const bool); 
-static int list_opt(const char *, const bool, const bool, 
-                    const bool, const bool, const bool);
-static int numerous_opening(struct users_configs *, struct l_list *,
-                            const bool, const bool, const bool, const bool);
-static int open_opt(const char *, const bool, const bool, const bool, 
-                    const bool, const bool, const bool);
-static int open_doc_list(struct users_configs *, const struct l_list *, 
-                         const bool, const bool);
+static int rearrange_if_needed(struct l_list *, bool, bool); 
+static int list_opt(const char *, bool, bool, bool, bool, bool);
+static int numerous_opening(struct users_configs *, struct l_list *, bool, bool, bool, bool);
+static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
+static int open_doc_list(struct users_configs *, const struct l_list *, bool, bool);
 
 
 static char *get_config_path() {
@@ -97,8 +93,8 @@ static struct users_configs *get_configs() {
 }
 
 
-static int count_opt(const char *str, const bool ignore, 
-                     const bool rec, const bool color) {
+static int count_opt(const char *str, bool ignore, 
+                     bool rec, bool color) {
     struct users_configs *configs;
     struct l_list *doc_list;
     int retval = -1;
@@ -127,7 +123,7 @@ static void opts_cleanup(struct users_configs *configs, struct l_list *doc_list)
 
 
 static int rearrange_if_needed(struct l_list *doc_list, 
-                               const bool sort, const bool reverse) {
+                               bool sort, bool reverse) {
     if(sort)
         if(sort_docs_alpha(doc_list))
             return -1;
@@ -139,9 +135,8 @@ static int rearrange_if_needed(struct l_list *doc_list,
 }
 
 
-static int list_opt(const char *str, const bool ignore, const bool rec, 
-                    const bool color, const bool sort, 
-                    const bool reverse) {
+static int list_opt(const char *str, bool ignore, bool rec, 
+                    bool color, bool sort, bool reverse) {
     struct users_configs *configs;
     struct l_list *doc_list;
     int retval = -1;
@@ -160,7 +155,7 @@ static int list_opt(const char *str, const bool ignore, const bool rec,
 
 static int open_doc_list(struct users_configs *configs, 
                          const struct l_list *doc_list,
-			         	 const bool rec, const bool color) {
+			         	 bool rec, bool color) {
 	const struct l_list *ptr = doc_list;
 	char *doc_path;
 	int retval = 0;
@@ -180,9 +175,8 @@ static int open_doc_list(struct users_configs *configs,
 }
 
 
-static int open_opt(const char *str, const bool ignore, const bool rec, 
-                    const bool color, const bool sort, const bool reverse,
-                    const bool numerous) {
+static int open_opt(const char *str, bool ignore, bool rec, bool color, 
+                    bool sort, bool reverse, bool numerous) {
     struct users_configs *configs;
     struct l_list *doc_list;
     int retval = -1;
@@ -210,8 +204,7 @@ static int open_opt(const char *str, const bool ignore, const bool rec,
 
 
 static int numerous_opening(struct users_configs *configs, struct l_list *doc_list,
-                            const bool rec, const bool color, const bool sort,
-                            const bool reverse) {
+                            bool rec, bool color, bool sort, bool reverse) {
     if(rearrange_if_needed(doc_list, sort, reverse))
         return -1;
     

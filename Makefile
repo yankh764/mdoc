@@ -1,35 +1,40 @@
 CC = gcc
 CFLAGS = -O2 -pipe -march=native -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
 
-BIN ?= mdoc
-DST ?= /usr/local/bin/$(BIN)
+DST_DIR = /usr/local/bin
 
+BIN ?= mdoc
 INCLUDE ?= include/
-OBJDIR ?= ./build
-SRCDIR ?= ./src
+OBJDIR ?= build
+SRCDIR ?= src
 
 SRCS := $(shell find $(SRCDIR) -iname "*.c")
 OBJS := $(SRCS:%=$(OBJDIR)/%.o)
 
 
-generate_bin: $(OBJS)
-	$(CC) $(OBJS) -o ./$(BIN) $(LDFLAGS)
 
+$(BIN): $(OBJS)
+	$(CC) $(OBJS) -o ./$@ $(LDFLAGS)
 
-$(OBJDIR)/%.c.o: %.c
-	mkdir -p $(dir $@)
+$(OBJDIR)/%.c.o: %.c 
+	mkdir -p $(dir $@) 
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
-.PHONY: clean install uninstall
 
+.PHONY: clean install uninstall all
+
+
+
+#For the users who like to type 'make all'
+all: $(BIN)
+
+install:
+	install ./$(BIN) $(DST_DIR)/$(BIN)
 
 clean:
 	$(RM) -r $(OBJDIR)
 	$(RM) ./$(BIN)
 
-install:
-	install ./$(BIN) $(DST)
-
 uninstall: clean
-	$(RM) $(DST)
+	$(RM) $(DST_DIR)/$(BIN)
