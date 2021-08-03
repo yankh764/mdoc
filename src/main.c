@@ -221,8 +221,8 @@ static int details_opt(const char *str, bool ignore, bool rec,
 
     if((configs = get_configs())) {
         if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if(!(retval = rearrange_if_needed(doc_list, sort, reverse)))
-                print_doc_details
+            if(!rearrange_if_needed(doc_list, sort, reverse))
+                retval = print_doc_list_details(doc_list, color);
 
         opts_cleanup(configs, doc_list);
     }
