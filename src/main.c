@@ -226,7 +226,7 @@ static int details_opt(const char *str, bool ignore, bool rec,
 
         opts_cleanup(configs, doc_list);
     }
-
+//test
     return retval;
 }
 
