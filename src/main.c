@@ -36,6 +36,7 @@ static int list_opt(const char *, bool, bool, bool, bool, bool);
 static int numerous_opening(struct users_configs *, struct l_list *, bool, bool, bool, bool);
 static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
 static int open_doc_list(struct users_configs *, const struct l_list *, bool, bool);
+static int details_opt(const char *, bool, bool, bool, bool, bool);
 
 
 static char *get_config_path() {
@@ -160,7 +161,7 @@ static int open_doc_list(struct users_configs *configs,
 	char *doc_path;
 	int retval = 0;
 
-	for(; (ptr && !retval); ptr=ptr->next) {
+	for(; ptr && !retval; ptr=ptr->next) {
 		if((doc_path = get_doc_path_multi_dir(configs->docs_dir_path, ptr->obj, rec))) {
 			if(!(retval = open_founded_doc_path(configs, doc_path)))
 				print_opening_doc(ptr->obj, color);
@@ -212,6 +213,24 @@ static int numerous_opening(struct users_configs *configs, struct l_list *doc_li
 }
 
 
+static int details_opt(const char *str, bool ignore, bool rec, 
+                       bool color, bool sort, bool reverse) {
+    struct users_configs *configs;
+    struct l_list *doc_list;
+    int retval = -1;
+
+    if((configs = get_configs())) {
+        if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
+            if(!(retval = rearrange_if_needed(doc_list, sort, reverse)))
+                print_doc_details
+
+        opts_cleanup(configs, doc_list);
+    }
+
+    return retval;
+}
+
+
 static void big_docs_num_error() {
     fprintf(stderr, "%s: can't open document: Several documents were found\n", prog_name_inf);
     fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
@@ -225,14 +244,15 @@ static void small_docs_num_error() {
 
             
 int main(int argc, char **argv) {
-    const char *valid_opt = ":hgsrainc::l::o::RC";
-    char *count_arg, *open_arg, *list_arg;
+    const char *valid_opt = ":hgsrainc::l::d::o::RC";
+    char *count_arg, *open_arg, *list_arg, *details_arg;
     struct users_configs *configs = NULL;
     struct l_list *doc_list = NULL;
     bool recursive = 1;
     bool generate = 0;
     bool numerous = 0;
     bool reverse = 0;
+    bool details = 0;
     bool ignore = 0;
     bool color = 1;
     bool count = 0;
@@ -279,6 +299,10 @@ int main(int argc, char **argv) {
             case 'l':
                 list = 1;
                 list_arg = argv[optind];
+                break;
+            case 'd':
+                details = 1;
+                details_arg = argv[optind];
                 break;
             case 'o':
                 open = 1;
@@ -331,6 +355,20 @@ int main(int argc, char **argv) {
         if(list_opt(list_arg, ignore, recursive, color, sort, reverse))
             goto Out;
     }
+    
+    else if(details) {
+        if(all)
+            details_arg = NULL;
+        
+        else if(!details_arg) {
+            missing_arg_err('d');
+            goto Out;
+        }
+
+        if(details_opt(details_arg, ignore, recursive, color, sort, reverse))
+            goto Out;
+    }
+
 
     else if(open) {
         if(all)

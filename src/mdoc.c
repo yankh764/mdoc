@@ -366,8 +366,8 @@ static char *get_doc_path(const char *dir_path,
 	if((dp = opendir_inf(dir_path)))
 		/* 
 		 * I decided to use goto here so it'll be easier to distinguish
-		 * between the errors (which don't use goto) and the succes when a 
-		 * document path is founded (whiich uses goto).
+		 * between the errors (which uses break statement) and the succes
+		 * when a document path is founded (which uses goto).
 		 */
 		while((entry = readdir_inf(dp))) {
 			if(dot_entry(entry->d_name))
@@ -511,7 +511,7 @@ void print_opening_doc(const char *doc_name, bool color) {
 /*
  * The main reason I chose to follow this method (using another functions)
  * for printing colored outputs is because to decrease the confusion that
- * could occur while seeing a printf() call with lots of macros.
+ * may occur while seeing a printf() call with lots of macros.
  */
 static void print_opening_doc_color(const char *doc_name)
 {
@@ -680,7 +680,8 @@ char *get_doc_path_multi_dir(const char *dirs_path,
 }
 
 
-/* Split dirs_path into one dir path at a time by converting
+/* 
+ * Split dirs_path into one dir path at a time by converting
  * each space with a null byte, then search for the document
  * in the dirs paths.
  */
@@ -774,6 +775,12 @@ static void print_doc_size(const off_t bytes, bool color) {
 }
 
 
+/* REMINDER:
+ *
+ * The main reason I chose to follow this method (using another functions)
+ * for printing colored outputs is because to decrease the confusion that
+ * may occur while seeing a printf() call with lots of macros.
+ */
 static void print_doc_size_color(const struct meas_unit format) 
 {
 	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "SIZE" ANSI_COLOR_BLUE "]"
@@ -806,6 +813,19 @@ static void print_doc_path_color(const char *doc_path)
 static void print_doc_path_no_color(const char *doc_path)
 {
 	printf("[PATH] %s\n", doc_path);
+}
+
+
+int print_doc_details(const char *doc_path, bool color) {
+	struct stat *statbuf;
+
+	if(!(statbuf = get_stat(doc_path)))
+		return -1;
+
+	print_doc_path(doc_path, color);
+	print_doc_size(statbuf->st_size, color);
+
+	return 0;
 }
 
 
