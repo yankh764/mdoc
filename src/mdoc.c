@@ -63,8 +63,6 @@ static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  s
 static void init_search_for_doc_ptrs(struct l_list **, struct l_list **, struct l_list **, struct l_list **, char **);
 static void search_for_doc_multi_dir_err(struct l_list **);
 static void free_and_null_l_list(struct l_list **ptr);
-static void *alloc_stat();
-static struct stat *get_stat(const char *);
 static void print_docs_num_color(const struct l_list *);
 static void print_docs_num_no_color(const struct l_list *);
 static void print_opening_doc_color(const char *);
@@ -73,9 +71,9 @@ static struct l_list *search_for_doc_multi_dir_split(char *, const char *, bool,
 static char *get_doc_path_multi_dir_split(char *, const char *, bool);
 static void print_doc_size(const off_t, bool);
 static struct meas_unit get_proper_size_format(const off_t);
-static float bytes_to_gb(off_t); 
-static float bytes_to_mb(off_t);
-static float bytes_to_kb(off_t);
+static float bytes_to_gb(float); 
+static float bytes_to_mb(float);
+static float bytes_to_kb(float);
 static struct meas_unit ret_proper_size_format(float, const char *); 
 static void print_doc_size_color(const struct meas_unit);
 static void print_doc_size_no_color(const struct meas_unit);
@@ -700,23 +698,6 @@ static char *get_doc_path_multi_dir_split(char *dirs_path_cp,
 }
 
 
-static void *alloc_stat() 
-{
-	return malloc_inf(sizeof(struct stat));
-}
-
-
-static struct stat *get_stat(const char *path) {
-	struct stat *statbuf;
-
-	if((statbuf = alloc_stat()))
-		if(!stat_inf(path, statbuf))
-			free_and_null((void **) statbuf);
-
-	return statbuf;
-}
-
-
 static struct meas_unit get_proper_size_format(const off_t bytes) {
 	const off_t gb = 1000000000;
 	const off_t mb = 1000000;
@@ -747,19 +728,19 @@ static struct meas_unit ret_proper_size_format(float size_format,
 }
 
 
-static float bytes_to_gb(off_t bytes) 
+static float bytes_to_gb(float bytes) 
 {
 	return bytes / 1000000000; 
 }
 
 
-static float bytes_to_mb(off_t bytes) 
+static float bytes_to_mb(float bytes) 
 {
 	return bytes / 1000000;
 }
 
 
-static float bytes_to_kb(off_t bytes) 
+static float bytes_to_kb(float bytes) 
 {
 	return bytes / 1000;
 }
@@ -817,13 +798,13 @@ static void print_doc_path_no_color(const char *doc_path)
 
 
 int print_doc_details(const char *doc_path, bool color) {
-	struct stat *statbuf;
+	struct stat statbuf;
 
-	if(!(statbuf = get_stat(doc_path)))
+	if(stat_inf(doc_path, &statbuf))
 		return -1;
 
 	print_doc_path(doc_path, color);
-	print_doc_size(statbuf->st_size, color);
+	print_doc_size(statbuf.st_size, color);
 
 	return 0;
 }

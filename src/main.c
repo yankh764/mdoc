@@ -37,6 +37,8 @@ static int numerous_opening(struct users_configs *, struct l_list *, bool, bool,
 static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
 static int open_doc_list(struct users_configs *, const struct l_list *, bool, bool);
 static int details_opt(const char *, bool, bool, bool, bool, bool);
+static int print_doc_list_details(const char *, const struct l_list *, bool, bool);
+static void separate_if_needed(const struct l_list *);
 
 
 static char *get_config_path() {
@@ -53,18 +55,6 @@ static char *get_config_path() {
     }
 
     return config_path;
-}
-
-
-static void missing_arg_err(const int opt) {
-    fprintf(stderr, "%s: missing argument for the '-%c' option\n", prog_name_inf, opt);
-    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
-}
-
-
-static void invalid_arg_err(const int opt) {
-    fprintf(stderr, "%s: invalid option '-%c'\n", prog_name_inf, opt);
-    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 }
 
 
@@ -222,12 +212,67 @@ static int details_opt(const char *str, bool ignore, bool rec,
     if((configs = get_configs())) {
         if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
             if(!rearrange_if_needed(doc_list, sort, reverse))
-                retval = print_doc_list_details(doc_list, color);
+                retval = print_doc_list_details(configs->docs_dir_path, doc_list, rec, color);
 
         opts_cleanup(configs, doc_list);
     }
-//test
+    
     return retval;
+}
+
+
+static int print_doc_list_details(const char *dirs_path, 
+                                  const struct l_list *doc_list, 
+                                  bool rec, bool color) {
+    const struct l_list *ptr = doc_list;
+    char *doc_path;
+    int retval = 0;
+
+    for(; ptr && !retval; ptr=ptr->next) {
+        if((doc_path = get_doc_path_multi_dir(dirs_path, ptr->obj, rec))) {
+            retval = print_doc_details(doc_path, color);
+
+            separate_if_needed(ptr->next);
+            free(doc_path);
+        }
+        else
+            retval = -1;
+    }
+
+    return retval;
+}
+
+
+/*
+ * Separate the details on each document if needed (if there's 
+ * another document after it).
+ */
+static void separate_if_needed(const struct l_list *ptr) {
+    /* const char *separator = 
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "--\n"; */
+    
+    /* For now the separator will be a new line */
+    const char *separator = "\n";
+
+    if(ptr)
+        printf("%s", separator);
+}
+
+
+static void missing_arg_err(const int opt) {
+    fprintf(stderr, "%s: missing argument for the '-%c' option\n", prog_name_inf, opt);
+    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
+}
+
+
+static void invalid_arg_err(const int opt) {
+    fprintf(stderr, "%s: invalid option '-%c'\n", prog_name_inf, opt);
+    fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 }
 
 
