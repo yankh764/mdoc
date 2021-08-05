@@ -7,6 +7,7 @@
 ---------------------------------------------------------
 */
 
+#include <time.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -80,6 +81,12 @@ static void print_doc_size_no_color(const struct meas_unit);
 static void print_doc_path(const char *, bool);
 static void print_doc_path_no_color(const char *);
 static void print_doc_path_color(const char *);
+static void print_last_mod_time(const time_t, bool);
+static void print_last_mod_time_color(const char *); 
+static void print_last_mod_time_no_color(const char *);
+static void print_doc_modes(const mode_t, bool);
+static void print_doc_modes_color(const mode_t); 
+static void print_doc_modes_no_color(const mode_t); 
 
 
 
@@ -804,9 +811,83 @@ int print_doc_details(const char *doc_path, bool color) {
 		return -1;
 
 	print_doc_path(doc_path, color);
+	print_last_mod_time(statbuf.st_mtime, color);
+	print_doc_modes(statbuf.st_mode, color);
 	print_doc_size(statbuf.st_size, color);
 
 	return 0;
+}
+
+
+static void print_last_mod_time(const time_t timep, bool color) {
+	/*
+	 * According to the Linux Man pages (man ctime(3), line 82) when using
+	 * using the function ctime_r(), the char buffer must have room for
+	 * at least 26 bytes. I decided I'll give it room for 35 bytes.
+	 */
+	char buf[35];
+
+	ctime_r(&timep, buf);
+
+	if(color)
+		print_last_mod_time_color(buf);
+	else 
+		print_last_mod_time_no_color(buf);
+}
+
+
+static void print_last_mod_time_color(const char *buffer) 
+{
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "TIME" ANSI_COLOR_BLUE "]"
+		   ANSI_COLOR_RED " %s" ANSI_COLOR_RESET, 
+		   buffer);	
+}
+
+
+static void print_last_mod_time_no_color(const char *buffer) 
+{
+	printf("[TIME] %s", buffer);	
+}
+
+
+static void print_doc_modes(const mode_t mode, bool color) {
+	if(color)
+		print_doc_modes_color(mode);
+	else
+		print_doc_modes_no_color(mode);
+}
+
+
+static void print_doc_modes_color(const mode_t mode) 
+{
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "MODE" ANSI_COLOR_BLUE "]"
+		   ANSI_COLOR_RED " -%c%c%c%c%c%c%c%c%c\n" ANSI_COLOR_RESET, 
+		   ((mode & S_IRUSR) ? 'r' : '-'), 
+		   ((mode & S_IWUSR) ? 'w' : '-'),
+		   ((mode & S_IXUSR) ? 'x' : '-'),
+		   ((mode & S_IRGRP) ? 'r' : '-'),
+		   ((mode & S_IWGRP) ? 'w' : '-'),
+		   ((mode & S_IXGRP) ? 'x' : '-'), 
+		   ((mode & S_IROTH) ? 'r' : '-'), 
+		   ((mode & S_IWOTH) ? 'w' : '-'), 
+		   ((mode & S_IXOTH) ? 'x' : '-')
+		  );
+}
+
+
+static void print_doc_modes_no_color(const mode_t mode) 
+{
+	printf("[MODE] -%c%c%c%c%c%c%c%c%c\n", 
+		   ((mode & S_IRUSR) ? 'r' : '-'), 
+		   ((mode & S_IWUSR) ? 'w' : '-'),
+		   ((mode & S_IXUSR) ? 'x' : '-'),
+		   ((mode & S_IRGRP) ? 'r' : '-'),
+		   ((mode & S_IWGRP) ? 'w' : '-'),
+		   ((mode & S_IXGRP) ? 'x' : '-'), 
+		   ((mode & S_IROTH) ? 'r' : '-'), 
+		   ((mode & S_IWOTH) ? 'w' : '-'), 
+		   ((mode & S_IXOTH) ? 'x' : '-')
+		  );
 }
 
 
@@ -857,5 +938,11 @@ void display_help(const char *name) {
 		   
 		   "  4. You can use the -a optoin with the -c, -d, -l and -o options instead\n"
 	       "     of passing an actual argument.\n" 
+
+		   "\n"
+
+		   "  5. The [TIME] section in the -d option stands for the last modification\n"
+		   "     time, or if the document haven't been modified once, it'll stand for\n"
+		   "     the creation time of the document.\n"
 		  );
 }
