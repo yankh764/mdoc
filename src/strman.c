@@ -21,8 +21,7 @@ static void two_chars_cleanup(char *, char *);
 static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
 static void free_and_null(void **);
-static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, 
-                                       const unsigned int);
+static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, const unsigned int);
 
 
 /*
@@ -118,6 +117,7 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 			if(!(current_word = small_let_copy(array[i])))
 				break;
 			
+			/* If current_word needs to come before smallest_word */
 			if(alpha_cmp(smallest_word, current_word))
 				adjust_val_after_alpha_cmp(&smallest_word, &current_word, &smallest_word_i, i);
 			
@@ -238,15 +238,15 @@ unsigned int space_to_null(char *text) {
 }
 
 
-/*
- * I decided to use memcpy() instead of strncpy() just 
- * because I like it more.
- */
 char *strcpy_dynamic(const char *src) {
 	const size_t len = strlen(src) + 1;
 	char *src_cpy;
 
 	if((src_cpy = malloc_inf(sizeof(char) * len)))
+		/*
+		 * I decided to use memcpy() instead of strncpy()
+		 * just because I like it more.
+		 */
 		memcpy(src_cpy, src, len);
 
 	return src_cpy;

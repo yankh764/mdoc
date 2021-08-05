@@ -36,7 +36,7 @@ char *get_line(FILE *stream) {
 	}	
 
 	if(line) 
-		if((line = realloc_inf(line, sizeof(char *) * (i+1))))	
+		if((line = realloc_inf(line, sizeof(char) * (i+1))))	
 			line[i] = '\0';	
 	
 	retval = line;

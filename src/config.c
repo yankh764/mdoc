@@ -58,9 +58,10 @@ static char *input_add_args() {
 
 
 /*                                                                   
- * This function will ask the user 2 questions. The first one is the 
+ * This function will ask the user 3 questions. The first one is the 
  * documents directory absolute path. Second is the pdf viewer's name.
- * Then it'll take the user's answers as an input.
+ * and the third is for additional arguments. Then it'll take the user's 
+ * answers as an input.
  */
 static struct users_configs *input_configs() { 
     struct users_configs *retval = NULL;
