@@ -1,7 +1,6 @@
 #ifndef MDOC_H
 #define MDOC_H
 
-
 #include <stdbool.h>
 #include "config.h"
 

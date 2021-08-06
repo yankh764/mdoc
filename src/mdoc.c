@@ -39,7 +39,11 @@ struct meas_unit {
 };
 
 
-/* Static Functions Prototype */
+/*--------------------------------*/
+/*   Static Functions Prototype   */
+/*--------------------------------*/
+/* Actual code starts on line 100 */
+/*--------------------------------*/
 static char *get_doc_path(const char *, const char *, bool);
 static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
@@ -64,8 +68,8 @@ static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  s
 static void init_search_for_doc_ptrs(struct l_list **, struct l_list **, struct l_list **, struct l_list **, char **);
 static void search_for_doc_multi_dir_err(struct l_list **);
 static void free_and_null_l_list(struct l_list **ptr);
-static void print_docs_num_color(const struct l_list *);
-static void print_docs_num_no_color(const struct l_list *);
+static void print_docs_num_color(const unsigned int, const char *);
+static void print_docs_num_no_color(const unsigned int, const char *);
 static void print_opening_doc_color(const char *);
 static void print_opening_doc_no_color(const char *);
 static struct l_list *search_for_doc_multi_dir_split(char *, const char *, bool, bool);
@@ -87,6 +91,9 @@ static void print_last_mod_time_no_color(const char *);
 static void print_doc_modes(const mode_t, bool);
 static void print_doc_modes_color(const mode_t); 
 static void print_doc_modes_no_color(const mode_t); 
+static void remove_extra_space(char *);
+static unsigned int get_extra_space_i(const char *);
+
 
 
 
@@ -533,24 +540,29 @@ static void print_opening_doc_no_color(const char *doc_name)
 
 
 void print_docs_num(const struct l_list *doc_list, bool color) {
-    if(color)
-		print_docs_num_color(doc_list);
+    const unsigned int docs_num = count_l_list_nodes(doc_list);
+	const char *file = docs_num == 1 ? "File" : "Files";
+
+	if(color)
+		print_docs_num_color(docs_num, file);
 	else
-		print_docs_num_no_color(doc_list);
+		print_docs_num_no_color(docs_num, file);
 }
 
 
-static void print_docs_num_color(const struct l_list *doc_list)
+static void print_docs_num_color(const unsigned int num, 
+		                         const char *file_word)
 {
 	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "COUNTED" ANSI_COLOR_BLUE "]"
-		   ANSI_COLOR_RED " %d Documents\n" ANSI_COLOR_RESET,
-		   count_l_list_nodes(doc_list));
+		   ANSI_COLOR_RED " %d %s\n" ANSI_COLOR_RESET,
+		   num, file_word);
 }
 
 
-static void print_docs_num_no_color(const struct l_list *doc_list)
+static void print_docs_num_no_color(const unsigned int num, 
+		                            const char *file_word) 
 {
-	printf("[COUNTED] %d Documents\n", count_l_list_nodes(doc_list));
+	printf("[COUNTED] %d %s\n", num, file_word);
 }
 
 
@@ -828,6 +840,7 @@ static void print_last_mod_time(const time_t timep, bool color) {
 	char buf[35];
 
 	ctime_r(&timep, buf);
+	remove_extra_space(buf);
 
 	if(color)
 		print_last_mod_time_color(buf);
@@ -847,6 +860,35 @@ static void print_last_mod_time_color(const char *buffer)
 static void print_last_mod_time_no_color(const char *buffer) 
 {
 	printf("[TIME] %s", buffer);	
+}
+
+
+/*
+ * A function to remove the annoying extra space that is
+ * passed to the buffer by the function ctime_r().
+ */
+static void remove_extra_space(char *buffer) {
+	unsigned int i = get_extra_space_i(buffer);
+
+	for(; buffer[i]!='\0'; i++)
+		buffer[i] = buffer[i+1];
+}
+
+
+static unsigned int get_extra_space_i(const char *buffer) {
+	unsigned int i, space;
+
+	for(i=0, space=0; buffer[i]!='\0'; i++) {
+		if(buffer[i] == ' ')
+			space++;
+		else
+			space = 0;
+
+		if(space > 1)
+			break;
+	}
+
+	return i;
 }
 
 
@@ -892,7 +934,7 @@ static void print_doc_modes_no_color(const mode_t mode)
 
 
 void display_help(const char *name) {
-	printf("Usage: %s  <options>  [argument]\n", name);
+	printf("Usage: %s <options> [argument]\n", name);
 	printf(
 	       "A command-line tool for managing your documents and easing your life.\n"
 	       
@@ -913,7 +955,7 @@ void display_help(const char *name) {
 	       " -R \t\t Disable recursive searching for the documents.\n"
 	       " -C \t\t Disable colorful output.\n"
            
-		   "\n\n"
+		   "\n\n\n"
 	       
 		   "NOTES:\n"
 		   "  1. It's good to note that the program has multiple directories support when\n"
@@ -944,5 +986,12 @@ void display_help(const char *name) {
 		   "  5. The [TIME] section in the -d option stands for the last modification\n"
 		   "     time, or if the document haven't been modified once, it'll stand for\n"
 		   "     the creation time of the document.\n"
+
+		   "\n\n"
+
+		   "EXIT CODES:\n"
+		   " 0   Success.\n"
+		   " 1   Error in the command line syntax.\n"
+		   " 2   General error in the program.\n"
 		  );
 }
