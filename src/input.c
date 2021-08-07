@@ -7,23 +7,38 @@
 ----------------------------------------------------------
 */
 
+#include <errno.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "informative.h"
 #include "input.h"
+
+
+/* Static Functions Prototype */
+static bool end_of_input(int);
+
+
+/*
+ * Return true if the passed char indicates the
+ * end of the input (if the char is '\n' or EOF).
+ */
+static bool end_of_input(int c) 
+{
+	return (c == '\n' || c == EOF);
+}
 
 
 /*
  * Get a line of input from stream without limiting it's size.
  */
 char *get_line(FILE *stream) {
-	char *retval, *line, *line_address;
+	char *line_address = NULL;
+	char *line = NULL;
 	unsigned int i;
 	int c;
 
-	retval = line_address = line = NULL;
-
 	for(i=0; (c = getc(stream)); i++) {
-		if(c == '\n' || c == EOF)
+		if(end_of_input(c))
 			break;
 		
 		if(!(line = realloc_inf(line, sizeof(char) * (i+1))))
@@ -39,11 +54,9 @@ char *get_line(FILE *stream) {
 		if((line = realloc_inf(line, sizeof(char) * (i+1))))	
 			line[i] = '\0';	
 	
-	retval = line;
-
-	if(!retval && line_address)
+	if(errno && line_address)
 		free(line_address);
 
-	return retval;
+	return line;
 }
 

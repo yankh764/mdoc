@@ -151,6 +151,10 @@ static int list_opt(const char *str, bool ignore, bool rec,
 }
 
 
+/*
+ * This funtion is going to be used only when there's at least
+ * one document in the doc_list.
+ */
 static int open_doc_list(struct users_configs *configs, 
                          const struct l_list *doc_list,
 			         	 bool rec, bool color) {
@@ -231,6 +235,10 @@ static int details_opt(const char *str, bool ignore, bool rec,
 }
 
 
+/*
+ * This funtion is going to be used only when there's at least
+ * one document in the doc_list.
+ */
 static int print_doc_list_details(const char *dirs_path, 
                                   const struct l_list *doc_list, 
                                   bool rec, bool color) {
@@ -264,13 +272,24 @@ static void separate_if_needed(const struct l_list *ptr) {
         "-----------------------------"
         "-----------------------------"
         "-----------------------------"
-        "--\n"; */
+        "--\n"; 
+    */
     
     /* For now the separator will be a new line */
     const char separator[] = "\n";
 
     if(ptr)
         printf("%s", separator);
+}
+
+
+static char *get_opt_arg(const char *last_argv) {
+    char *optarg = NULL;
+    
+    if(*last_argv != '-')
+        optarg = (char *) last_argv;
+
+    return optarg;
 }
 
 
@@ -287,16 +306,6 @@ static int invalid_arg_err(const int opt) {
     fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 
     return CLI_ERROR;
-}
-
-
-static char *get_opt_arg(const char *last_argv) {
-    char *optarg = NULL;
-    
-    if(*last_argv != '-')
-        optarg = (char *) last_argv;
-
-    return optarg;
 }
 
 

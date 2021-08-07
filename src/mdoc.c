@@ -25,6 +25,7 @@
 #define ANSI_COLOR_RESET  "\x1b[0m"
 
 
+
 /* To indicate if an previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
 bool prev_error = 0;
@@ -96,23 +97,18 @@ static unsigned int get_extra_space_i(const char *);
 
 
 
-
 /*
  * Return a pointer to allocated l_list structure that also 
  * has an allocated obj to it with the size of obj_size.
  */
 static struct l_list *alloc_l_list_obj(const size_t obj_size) {
-	struct l_list *retval = NULL;
 	struct l_list *ptr;
 
 	if((ptr = alloc_l_list()))
-		if((ptr->obj = malloc_inf(sizeof(char) * obj_size)))
-			retval = ptr;
+		if(!(ptr->obj = malloc_inf(sizeof(char) * obj_size)))
+			free_and_null((void **) &ptr);
 
-	if(!retval && ptr)
-		free(ptr);
-
-	return retval;
+	return ptr;
 }
 
 
@@ -150,7 +146,7 @@ static char *get_entry_path(const char *dir_path, const char *entry_name) {
 static struct l_list *get_last_node(const struct l_list *ptr) {
 	struct l_list *prev;
 
-	for(; ptr; ptr=ptr->next)
+	for(prev=NULL; ptr; ptr=ptr->next)
 		prev = (struct l_list *) ptr;
 
 	return prev;
@@ -254,14 +250,17 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 		}
 	
 	if(errno || prev_error)
-		search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
+		search_for_doc_error(new_path, &doc_list_begin, 
+							 &doc_list_rec_begin);
 
 	if(dp)
 		/* If error occured while closing dp and no cleanup have been done already */
 		if(closedir_inf(dp) && !prev_error) 
-			search_for_doc_error(new_path, &doc_list_begin, &doc_list_rec_begin);
+			search_for_doc_error(new_path, &doc_list_begin, 
+								 &doc_list_rec_begin);
 	
-	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
+	return search_for_doc_retval(current_node, doc_list_begin, 
+								 doc_list_rec_begin);
 }
 
 
@@ -934,28 +933,28 @@ static void print_doc_modes_no_color(const mode_t mode)
 
 
 void display_help(const char *name) {
-	printf("Usage: %s <options> [argument]\n", name);
+	printf("Usage: %s [OPTIONS]... ARGUMENT\n", name);
 	printf(
 	       "A command-line tool for managing your documents and easing your life.\n"
 	       
 		   "\n"
 		   
 		   "Available options:\n"
-	       " -h \t\t Display this help message.\n"
-	       " -g \t\t Generate new configurations file.\n"
-	       " -s \t\t Sort the founded documents alphabetically.\n"
-	       " -r \t\t Reverse the order of the founded documents.\n"
-	       " -a \t\t Include all documents.\n"
-	       " -i \t\t Ignore case distinctions while searching for the documents.\n"
-	       " -n \t\t Allow numerous documents opening (execution).\n"
-	       " -c \t\t Count the existing documents with the passed string sequence.\n"
-	       " -l \t\t List the existing documents with the passed string sequence.\n"
-	       " -d \t\t Display details on the documents with the passed string sequence.\n"
-		   " -o \t\t Open the founded document with the passed string sequence.\n"
-	       " -R \t\t Disable recursive searching for the documents.\n"
-	       " -C \t\t Disable colorful output.\n"
+	       " -h \t\t Display this help message\n"
+	       " -g \t\t Generate new configurations file\n"
+	       " -s \t\t Sort the founded documents alphabetically\n"
+	       " -r \t\t Reverse the order of the founded documents\n"
+	       " -a \t\t Include all documents\n"
+	       " -i \t\t Ignore case distinctions while searching for the documents\n"
+	       " -n \t\t Allow numerous documents opening (execution)\n"
+	       " -c \t\t Count the existing documents with the passed string sequence\n"
+	       " -l \t\t List the existing documents with the passed string sequence\n"
+	       " -d \t\t Display details on the documents with the passed string sequence\n"
+		   " -o \t\t Open the founded document with the passed string sequence\n"
+	       " -R \t\t Disable recursive searching for the documents\n"
+	       " -C \t\t Disable colorful output\n"
            
-		   "\n\n\n"
+		   "\n\n"
 	       
 		   "NOTES:\n"
 		   "  1. It's good to note that the program has multiple directories support when\n"
@@ -990,8 +989,8 @@ void display_help(const char *name) {
 		   "\n\n"
 
 		   "EXIT CODES:\n"
-		   " 0   Success.\n"
-		   " 1   Error in the command line syntax.\n"
-		   " 2   General error in the program.\n"
+		   " 0   Success\n"
+		   " 1   Error in the command line syntax\n"
+		   " 2   General error in the program\n"
 		  );
 }
