@@ -182,3 +182,14 @@ char *getenv_inf(const char *name) {
 
 	return retval;
 }
+
+
+char *ctime_r_inf(const time_t *timep, char *buf) {
+	char *retval;
+
+	if(!(retval = ctime_r(timep, buf)))
+		fprintf(stderr, "%s: couldn't convert time: %s\n", 
+				prog_name_inf, strerror(errno));
+
+	return retval;
+}

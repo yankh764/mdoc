@@ -1,12 +1,13 @@
 #ifndef INFORMATIVE_H
 #define INFORMATIVE_H
 
+#include <time.h>
 #include <stdio.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-extern const char *prog_name_inf; 
+extern char *prog_name_inf; 
 
 
 void *malloc_inf(size_t);
@@ -24,5 +25,6 @@ void *realloc_inf(void *, size_t);
 int execvp_inf(const char *, char *const *);
 void *reallocarray_inf(void *, size_t, size_t);
 char *getenv_inf(const char *);
+char *ctime_r_inf(const time_t *, char *);
 
 #endif

@@ -7,7 +7,6 @@
 ---------------------------------------------------------
 */
 
-#include <time.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -35,7 +34,7 @@ bool prev_error = 0;
  * and unit name for the document size.
  */
 struct meas_unit {
-	float size_format;
+	const float size_format;
 	const char *unit_name;
 };
 
@@ -86,7 +85,7 @@ static void print_doc_size_no_color(const struct meas_unit);
 static void print_doc_path(const char *, bool);
 static void print_doc_path_no_color(const char *);
 static void print_doc_path_color(const char *);
-static void print_last_mod_time(const time_t, bool);
+static int print_last_mod_time(const time_t, bool);
 static void print_last_mod_time_color(const char *); 
 static void print_last_mod_time_no_color(const char *);
 static void print_doc_modes(const mode_t, bool);
@@ -243,7 +242,6 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 				
 					adj_search_for_doc_node_val(current_node, entry->d_name, len);
 				}
-				
 				else if(ret == -1)
 					break;
 			}
@@ -288,9 +286,8 @@ static int check_save_doc_name(const char *doc_name,
 	if(ignore_case)
 		return strstr_i(doc_name, str);
 
-	else
-		return (strstr(doc_name, str) != NULL) ? 
-			1 : 0;
+	return (strstr(doc_name, str) != NULL) ? 
+		1 : 0;
 }
 
 
@@ -320,12 +317,9 @@ static void search_for_doc_error(char *char_ptr,
 	if(char_ptr)
 		free(char_ptr);	
 	if(*l_list_ptr1)
-		free_l_list(*l_list_ptr1);
+		free_and_null_l_list(l_list_ptr1);
 	if(*l_list_ptr2)
-		free_l_list(*l_list_ptr2);
-
-	*l_list_ptr1 = NULL;
-	*l_list_ptr2 = NULL;
+		free_and_null_l_list(l_list_ptr2);
 
 	prev_error = true;
 }
@@ -367,13 +361,13 @@ unsigned int count_l_list_nodes(const struct l_list *ptr) {
 static char *get_doc_path(const char *dir_path, 
                           const char *full_doc_name, 
 				          bool recursive) {
-	char *new_path, *ret_path; /* ret_path is the returned path from the recursion */
+	/* ret_path is the returned path from the recursion */
+	char *ret_path = NULL;
+	char *new_path = NULL;
 	struct dirent *entry;
 	struct stat stbuf;
 	DIR *dp;
 
-	new_path = ret_path = NULL;
-	
 	if((dp = opendir_inf(dir_path)))
 		/* 
 		 * I decided to use goto here so it'll be easier to distinguish
@@ -394,8 +388,8 @@ static char *get_doc_path(const char *dir_path,
 				if((ret_path = get_doc_path(new_path, full_doc_name, recursive)))
 					goto Out;
 				
-				else if(prev_error)
-					break;
+                else if(prev_error)
+                    break;
 			}
 			else if(S_ISREG(stbuf.st_mode) 
 			 && strstr(new_path, full_doc_name))
@@ -403,10 +397,12 @@ static char *get_doc_path(const char *dir_path,
 		
 			free_and_null((void **) &new_path);
 		}
-	
+
+    /* The if statemnt is neccesarry to distinguish between
+     * errors and unfouded document path.
+     */
 	if(errno || prev_error)
 		get_doc_path_error(&new_path, &ret_path);
-
 
 	Out:
 		if(dp)
@@ -448,8 +444,7 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 	else if(new_path)
 		return new_path;
 	
-	else 
-		return NULL;
+	return NULL;
 }
 
 
@@ -521,7 +516,7 @@ void print_opening_doc(const char *doc_name, bool color) {
 
 /*
  * The main reason I chose to follow this method (using another functions)
- * for printing colored outputs is because to decrease the confusion that
+ * for printing colored outputs is to decrease the confusion that
  * may occur while seeing a printf() call with lots of macros.
  */
 static void print_opening_doc_color(const char *doc_name)
@@ -540,7 +535,8 @@ static void print_opening_doc_no_color(const char *doc_name)
 
 void print_docs_num(const struct l_list *doc_list, bool color) {
     const unsigned int docs_num = count_l_list_nodes(doc_list);
-	const char *file = docs_num == 1 ? "File" : "Files";
+	const char *file = (docs_num == 1) ? 
+        "File" : "Files";
 
 	if(color)
 		print_docs_num_color(docs_num, file);
@@ -625,16 +621,16 @@ void reverse_l_list_obj(struct l_list *ptr) {
  */
 struct l_list *search_for_doc_multi_dir(const char *dirs_path, const char *str, 
                                         bool ignore_case, bool rec) {
-	struct l_list *retval = NULL;
+	struct l_list *doc_list = NULL;
 	char *dirs_path_cp; 
 
 	if((dirs_path_cp = strcpy_dynamic(dirs_path))) {
-		retval = search_for_doc_multi_dir_split(dirs_path_cp, str, 
-				                                ignore_case, rec);	
+		doc_list = search_for_doc_multi_dir_split(dirs_path_cp, str, 
+			 	                                  ignore_case, rec);	
 		free(dirs_path_cp);
 	}
 
-	return retval;
+	return doc_list;
 }
 
 
@@ -684,15 +680,15 @@ static void search_for_doc_multi_dir_err(struct l_list **doc_list) {
 char *get_doc_path_multi_dir(const char *dirs_path, 
                              const char *full_doc_name, 
                              bool rec) {
-	char *retval = NULL;
+	char *doc_path = NULL;
 	char *dirs_path_cp;
 	
 	if((dirs_path_cp = strcpy_dynamic(dirs_path))) {
-		retval = get_doc_path_multi_dir_split(dirs_path_cp, full_doc_name, rec)	;
+		doc_path = get_doc_path_multi_dir_split(dirs_path_cp, full_doc_name, rec);
 		free(dirs_path_cp);
 	}
 
-	return retval;
+	return doc_path;
 }
 
 
@@ -708,9 +704,13 @@ static char *get_doc_path_multi_dir_split(char *dirs_path_cp,
 	unsigned int ret;
 	
 	for(; (ret = space_to_null(dirs_path_cp)); dirs_path_cp+=ret)
-		if(*dirs_path_cp != '\0')
-			if((doc_path = get_doc_path(dirs_path_cp, full_doc_name, rec)) || prev_error)
+		if(*dirs_path_cp != '\0') {
+			if((doc_path = get_doc_path(dirs_path_cp, full_doc_name, rec)))
 				break;
+
+            if(prev_error)
+                break;
+        }
 
 	return doc_path;
 }
@@ -737,10 +737,7 @@ static struct meas_unit get_proper_size_format(const off_t bytes) {
 
 static struct meas_unit ret_proper_size_format(float size_format, 
 	                                           const char *unit_name) {
-	struct meas_unit retval;
-
-	retval.size_format = size_format;
-	retval.unit_name = unit_name;
+	struct meas_unit retval = {size_format, unit_name};
 
 	return retval; 
 }
@@ -822,7 +819,10 @@ int print_doc_details(const char *doc_path, bool color) {
 		return -1;
 
 	print_doc_path(doc_path, color);
-	print_last_mod_time(statbuf.st_mtime, color);
+
+	if(print_last_mod_time(statbuf.st_mtime, color))
+		return -1;
+	
 	print_doc_modes(statbuf.st_mode, color);
 	print_doc_size(statbuf.st_size, color);
 
@@ -830,7 +830,7 @@ int print_doc_details(const char *doc_path, bool color) {
 }
 
 
-static void print_last_mod_time(const time_t timep, bool color) {
+static int print_last_mod_time(const time_t timep, bool color) {
 	/*
 	 * According to the Linux Man pages (man ctime(3), line 82) when using
 	 * using the function ctime_r(), the char buffer must have room for
@@ -838,13 +838,17 @@ static void print_last_mod_time(const time_t timep, bool color) {
 	 */
 	char buf[35];
 
-	ctime_r(&timep, buf);
+	if(!ctime_r_inf(&timep, buf))
+		return -1;
+
 	remove_extra_space(buf);
 
 	if(color)
 		print_last_mod_time_color(buf);
 	else 
 		print_last_mod_time_no_color(buf);
+
+	return 0;
 }
 
 

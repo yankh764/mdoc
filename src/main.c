@@ -24,7 +24,7 @@
 #define SUCCES     0
 
 
-const char *prog_name_inf;
+char *prog_name_inf;
 
 
 /* Static Functions Prototype */
