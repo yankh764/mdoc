@@ -76,9 +76,9 @@ static struct l_list *search_for_doc_multi_dir_split(char *, const char *, bool,
 static char *get_doc_path_multi_dir_split(char *, const char *, bool);
 static void print_doc_size(const off_t, bool);
 static struct meas_unit get_proper_size_format(const off_t);
-static float bytes_to_gb(float); 
-static float bytes_to_mb(float);
-static float bytes_to_kb(float);
+static float bytes_to_gb(off_t); 
+static float bytes_to_mb(off_t);
+static float bytes_to_kb(off_t);
 static struct meas_unit ret_proper_size_format(float, const char *); 
 static void print_doc_size_color(const struct meas_unit);
 static void print_doc_size_no_color(const struct meas_unit);
@@ -743,21 +743,21 @@ static struct meas_unit ret_proper_size_format(float size_format,
 }
 
 
-static float bytes_to_gb(float bytes) 
+static float bytes_to_gb(off_t bytes) 
 {
-	return bytes / 1000000000; 
+	return (float) bytes / 1000000000; 
 }
 
 
-static float bytes_to_mb(float bytes) 
+static float bytes_to_mb(off_t bytes) 
 {
-	return bytes / 1000000;
+	return (float) bytes / 1000000;
 }
 
 
-static float bytes_to_kb(float bytes) 
-{
-	return bytes / 1000;
+static float bytes_to_kb(off_t bytes) 
+{ 
+	return (float) bytes / 1000;
 }
 
 

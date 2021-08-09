@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -O2 -pipe -march=native -fstack-protector-strong -Wextra -Wall -I$(INCLUDE)
+CFLAGS = -O2 -pipe -march=native -fstack-protector-strong -Wextra \
+		 -Wall -Werror -Wundef -Wformat=2 -Wstrict-overflow=5 -I$(INCLUDE)
 
 DST_DIR = /usr/local/bin
 
@@ -22,7 +23,7 @@ $(OBJDIR)/%.c.o: %.c
 
 
 
-.PHONY: clean install uninstall all
+.PHONY: clean install uninstall all gdb
 
 
 

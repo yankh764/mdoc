@@ -24,6 +24,7 @@ static char *input_docs_dir_path();
 static char *input_pdf_viewer_name();
 static char *input_add_args();
 static void null_users_configs(struct users_configs *);
+static void *alloc_users_configs();
 
 
 static char *get_line_inf(FILE *stream) {
