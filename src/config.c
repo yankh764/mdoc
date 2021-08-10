@@ -46,7 +46,7 @@ static char *input_docs_dir_path() {
 
 
 static char *input_pdf_viewer_name() {
-	printf("\nPlease enter your pdf's viewer name: ");
+	printf("\nPlease enter your documents viewer's name: ");
 
 	return get_line_inf(stdin);
 }

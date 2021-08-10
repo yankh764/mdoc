@@ -47,10 +47,10 @@ And a lot more...
     ```
 
 ## Uninstallation
-```Bash
-USER # cd mdoc
-ROOT # make uninstall
-```
+* Go to the cloned directory and type:
+    ```Bash
+    ROOT # make uninstall
+    ```
 
 ## Usage
 * It's very recommended to read the help message before using the program. You can do that by typing:
@@ -61,6 +61,16 @@ ROOT # make uninstall
     ```Bash
     USER # mdoc -g
     ```
-You can also do that manually. See [Manual Configurations](#manual-configurations).
+Note: you can also do that manually. See [Manual Configurations](#manual-configurations).
+  
+After doing the previous steps you will be ready to enjoy your new document manager :)
+
 
 ## Manual Configurations
+* Create a file with the following path: **~/.config/mdoc**
+* The configurations file is devided to 3 lines: 
+    1. The documents directories paths.
+    2. The documents viewer's name.
+    3. The additional option and arguments for the documents viewer execution command (optional).
+  
+After doing the previous steps you will be ready to enjoy your new document manager :)
