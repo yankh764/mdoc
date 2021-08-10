@@ -13,7 +13,7 @@ I started devoloping it just out of boredom and of course because I love writing
 * Sorting results alphabetically
 * Colorful output
   
-And a lot more...
+And a lot more... See the [Help Message](#mdoc-help-message)
 
 
 ## Dependencies
@@ -126,3 +126,6 @@ After doing the previous steps you will be ready to enjoy your new document mana
      1   Error in the command line syntax
      2   General error in the program
     ```
+
+## Contributing
+Pull requests are welcomed and appreciated.
