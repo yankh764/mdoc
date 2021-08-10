@@ -1,8 +1,10 @@
 # Mdoc - A command-line tool for managing your documents
-This program is dedicated to all the command-line lovers that also has lots of documents or  
-files to handle and read.  
 Mdoc is an improved version of my [Bash Script](https://github.com/yankh764/rdoc) written in C.  
+Just as it's description says, it's A command-line tool for managing your documents and easing your life.  
 I started devoloping it just out of boredom and of course because I love writing code.
+  
+This program is dedicated to all the command-line lovers that also has lots of documents or  
+files to read and handle.
 
 
 ## Main Features
@@ -13,7 +15,7 @@ I started devoloping it just out of boredom and of course because I love writing
 * Sorting results alphabetically
 * Colorful output
   
-And a lot more... See the [Help Message](#mdoc-help-message)
+And a lot more... See [the help message](#mdoc-help-message)
 
 
 ## Dependencies
@@ -126,6 +128,7 @@ After doing the previous steps you will be ready to enjoy your new document mana
      1   Error in the command line syntax
      2   General error in the program
     ```
+
 
 ## Contributing
 Pull requests are welcomed and appreciated.
