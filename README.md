@@ -1,8 +1,8 @@
 # Mdoc - A command-line tool for managing your documents
-This program is dedicated to all the command-line lovers that also has lots of documents and  
+This program is dedicated to all the command-line lovers that also has lots of documents or  
 files to handle and read.  
 Mdoc is an improved version of my [Bash Script](https://github.com/yankh764/rdoc) written in C.  
-I started devoloping it just out of boredom and of course because I love writing code -especially in C-.
+I started devoloping it just out of boredom and of course because I love writing code.
 
 
 ## Main Features
@@ -12,14 +12,18 @@ I started devoloping it just out of boredom and of course because I love writing
 * Opening files using your favorite applications
 * Sorting results alphabetically
 * Colorful output
+  
+And a lot more...
 
 
 ## Dependencies
-* A C Compiler -prefered GCC / Clang-
+* A C Compiler (GCC/Clang)
+* GNU Make
+* Git
 
 
 ## Installation
-1. Cloning the repositorie:
+1. Cloning the repository:
     ```Bash
     USER # git clone https://github.com/yankh764/mdoc.git
     ```
@@ -30,7 +34,7 @@ I started devoloping it just out of boredom and of course because I love writing
     ```
   
 Note: by default GCC is used to compile the program but you can change that  
-by typing for example:
+by typing for example:  
     ```Bash
     USER # make CC=clang
     ```
