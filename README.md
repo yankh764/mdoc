@@ -42,15 +42,15 @@ And a lot more...
     ROOT # make install
     ```
 4. Cleaning build dependencies (optional):
-    ```Bash
-    USER # make clean
-    ```
+```Bash
+USER # make clean
+```
 
 ## Uninstallation
-    ```Bash
-    USER # cd mdoc
-    ROOT # make uninstall
-    ```
+```Bash
+USER # cd mdoc
+ROOT # make uninstall
+```
 
 ## Usage
 * It's very recommended to read the help message before using the program. You can do that by typing:
