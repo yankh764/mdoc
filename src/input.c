@@ -44,10 +44,10 @@ char *get_line(FILE *stream) {
 		if(!(line = realloc_inf(line, sizeof(char) * (i+1))))
 			break;
 		
+		line[i] = c;
 		/* Save the address of line in case realloc_inf() overwrote it with NULL, 
 		   so cleanup can be done.                                               */
 		line_address = line;
-		line[i] = c;
 	}	
 
 	if(line) 

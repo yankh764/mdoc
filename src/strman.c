@@ -18,7 +18,7 @@
 
 /* Static Functions Prototype */
 static void two_chars_cleanup(char *, char *);
-static long int get_smallest_word_i(char **, const unsigned int);
+static long get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
 static void free_and_null(void **);
 static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, const unsigned int);
@@ -29,8 +29,8 @@ static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, const u
  */
 char *small_let_copy(const char *str) {
 	const size_t len = strlen(str) + 1;
+	char *str_small; 
 	unsigned int i;
-	char *str_small; /* Small letter copy of str */
 
 	if((str_small = malloc_inf(sizeof(char) * len))) {
 		for(i=0; str[i]!='\0'; i++) {
@@ -57,13 +57,9 @@ int strstr_i(const char *haystack, const char *needle) {
 	
 	/* If made small letter copy of haystack and needle sucessfully */
 	if((haystack_small = small_let_copy(haystack)) 
-	 && (needle_small = small_let_copy(needle))) {
-		
-		if(strstr(haystack_small, needle_small))
-			retval = 1;
-		else 
-			retval = 0; 
-	}
+	 && (needle_small = small_let_copy(needle)))
+		retval = strstr(haystack_small, needle_small) ? 1 : 0;
+	
 	two_chars_cleanup(haystack_small, needle_small);
 
 	return retval;
@@ -84,7 +80,7 @@ static void two_chars_cleanup(char *ptr1, char *ptr2) {
 int strsort_alpha(char **unsorted, char **sorted, 
                   const unsigned int size) {
 	unsigned int i;
-	long int ret_i;
+	long ret_i;
 
 	for(i=0; i<size; i++) {
 		if((ret_i = get_smallest_word_i(unsorted, size)) == -1)
@@ -103,11 +99,11 @@ int strsort_alpha(char **unsorted, char **sorted,
  * Return the index of the word that has letters with a 
  * lowest value in the array of pointers. 
  */
-static long int get_smallest_word_i(char **array, const unsigned int size) {
+static long get_smallest_word_i(char **array, const unsigned int size) {
 	unsigned int i, smallest_word_i;
 	char *smallest_word = NULL;
 	char *current_word = NULL;
-	long int retval = -1; 
+	long retval = -1; 
 
 	for(i=0, smallest_word_i=0; i<size; i++) {
 		if(array[i] == NULL)
@@ -205,7 +201,7 @@ unsigned int count_words(const char *line) {
 	unsigned int i;
 	bool inside = 0;
 
-	for(i=0, words=0; line[i]!='\n' && line[i]!='\0'; i++) {
+	for(i=0, words=0; line[i]!='\0'; i++) {
 		if(isspace(line[i]))
 			inside = 0;
 		

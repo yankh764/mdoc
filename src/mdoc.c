@@ -34,7 +34,7 @@ bool prev_error = 0;
  * and unit name for the document size.
  */
 struct meas_unit {
-	const float size_format;
+	float size_format;
 	const char *unit_name;
 };
 
@@ -737,7 +737,10 @@ static struct meas_unit get_proper_size_format(const off_t bytes) {
 
 static struct meas_unit ret_proper_size_format(float size_format, 
 	                                           const char *unit_name) {
-	struct meas_unit retval = {size_format, unit_name};
+	struct meas_unit retval;
+
+	retval.size_format = size_format;
+	retval.unit_name = unit_name;
 
 	return retval; 
 }

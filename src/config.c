@@ -25,6 +25,7 @@ static char *input_pdf_viewer_name();
 static char *input_add_args();
 static void null_users_configs(struct users_configs *);
 static void *alloc_users_configs();
+static void free_and_null_users_configs(struct users_configs **);
 
 
 static char *get_line_inf(FILE *stream) {
@@ -65,31 +66,28 @@ static char *input_add_args() {
  * answers as an input.
  */
 static struct users_configs *input_configs() { 
-    struct users_configs *retval = NULL;
     struct users_configs *input;
 
-	if((input = alloc_users_configs())) {
-		null_users_configs(input);
-	
-		if(!(input->docs_dir_path = input_docs_dir_path())) 
-			goto Out;
+	if((input = alloc_users_configs()))
+		/*
+		 * Get all the necessary input from the user.
+		 * Note: inputting add_args is optional, so the program
+		 * will fail only if it's missing due to an error.
+		 */
+		if(!(input->docs_dir_path = input_docs_dir_path()) ||
+		   !(input->pdf_viewer = input_pdf_viewer_name())  ||
+		   (!(input->add_args = input_add_args())          && 
+		      errno))
+			/* Failure */
+			 free_and_null_users_configs(&input);
 
-		if(!(input->pdf_viewer = input_pdf_viewer_name()))
-			goto Out;
-		
-		/* Only fail if error detected since it's optional secition */
-		input->add_args = input_add_args();
-		if(errno)
-			goto Out;
+    return input; 
+}
 
-		retval = input;
-	}
 
-    Out:
-        if(!retval && input)
-			free_users_configs(input);
-
-        return retval; 
+static void free_and_null_users_configs(struct users_configs **ptr) {
+	free_users_configs(*ptr);
+	*ptr = NULL;
 }
 
 
@@ -104,7 +102,7 @@ static void *alloc_users_configs()
  * user's answers.
  */
 int generate_config(const char *abs_config_path) {
-	struct users_configs *configs = NULL;
+	struct users_configs *configs;
 	int retval = -1;
 	FILE *fp;
 
@@ -143,9 +141,10 @@ struct users_configs *read_configs(const char *abs_config_path) {
 		if((configs = alloc_users_configs())) {
 			null_users_configs(configs);
 
-			if((configs->docs_dir_path = get_line_inf(fp)) 
-			 && (configs->pdf_viewer = get_line_inf(fp))
-			 && ((configs->add_args = get_line(fp)) || !errno))
+			if((configs->docs_dir_path = get_line_inf(fp)) && 
+			   (configs->pdf_viewer = get_line_inf(fp))    &&
+			   ((configs->add_args = get_line(fp))         || 
+				 !errno))
 				retval = configs;
 		}
 
