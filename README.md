@@ -20,8 +20,5 @@ I started devoloping it just out of boredom and of course because I love writing
 1. Cloning the repositories:
 
     ```Bash
-    user # git clone https://github.com/yankh764/mdoc.git
+    USER # git clone https://github.com/yankh764/mdoc.git
     ```
-
-2. 
-
