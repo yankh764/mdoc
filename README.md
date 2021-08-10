@@ -15,7 +15,7 @@ files to read and handle.
 * Sorting results alphabetically
 * Colorful output
   
-And a lot more... See [the help message](#mdoc-help-message)
+And a lot more... See [Mdoc Help Message](#mdoc-help-message)
 
 
 ## Dependencies
