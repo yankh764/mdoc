@@ -42,9 +42,9 @@ And a lot more...
     ROOT # make install
     ```
 4. Cleaning build dependencies (optional):
-```Bash
-USER # make clean
-```
+    ```Bash
+    USER # make clean
+    ```
 
 ## Uninstallation
 ```Bash
@@ -61,4 +61,6 @@ ROOT # make uninstall
     ```Bash
     USER # mdoc -g
     ```
-You can also do that manually. See 
+You can also do that manually. See [Manual Configurations](#manual-configurations).
+
+## Manual Configurations
