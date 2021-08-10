@@ -32,9 +32,8 @@ And a lot more...
     USER # cd mdoc
     USER # make
     ```
-  
 Note: by default GCC is used to compile the program but you can change that  
-by typing for example:  
+by typing for example:
     ```Bash
     USER # make CC=clang
     ```
