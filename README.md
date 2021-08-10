@@ -31,10 +31,10 @@ And a lot more...
     ```Bash
     USER # cd mdoc
     USER # make
-    ```
-Note: by default GCC is used to compile the program but you can change that  
-by typing for example:
-    ```Bash
+    
+    Note: by default GCC is used to compile the program but you can change that  
+    by typing for example:
+
     USER # make CC=clang
     ```
 3. Installing the executable to your **PATH**:
