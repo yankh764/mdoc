@@ -24,41 +24,41 @@ And a lot more...
 
 ## Installation
 1. Cloning the repository:
-    ```
+    ```Bash
     USER # git clone https://github.com/yankh764/mdoc.git
     ```
 2. Compiling the code:
-    ```
+    ```Bash
     USER # cd mdoc
     USER # make
     
     Note: by default GCC is used to compile the program but you can change that  
-    by typing for example:
+    by typing:
 
     USER # make CC=clang
     ```
 3. Installing the executable to your **PATH**:
-    ```
+    ```Bash
     ROOT # make install
     ```
 4. Cleaning build dependencies (optional):
-    ```
+    ```Bash
     USER # make clean
     ```
 
 ## Uninstallation
-    ```
+    ```Bash
     USER # cd mdoc
     ROOT # make uninstall
     ```
 
 ## Usage
 * It's very recommended to read the help message before using the program. You can do that by typing:
-    ```
+    ```Bash
     USER # mdoc
     ```
 * You must generate configurations file by typing:
-    ```
+    ```Bash
     USER # mdoc -g
     ```
 You can also do that manually. See 
