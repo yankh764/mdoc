@@ -131,7 +131,7 @@ After doing the previous steps you will be ready to enjoy your new document mana
 
 
 ## TODO
-* Add support for long options.
+* Adding support for long options.
 * Adding option for listing the content of specific directory.
 
 
