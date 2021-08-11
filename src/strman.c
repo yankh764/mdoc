@@ -18,10 +18,10 @@
 
 /* Static Functions Prototype */
 static void two_chars_cleanup(char *, char *);
-static long get_smallest_word_i(char **, const unsigned int);
+static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
 static void free_and_null(void **);
-static void adjust_val_after_alpha_cmp(char **, char **, unsigned int *, const unsigned int);
+static void adjust_val_after_alpha_cmp(char **, char **, long int *, unsigned int);
 
 
 /*
@@ -80,7 +80,7 @@ static void two_chars_cleanup(char *ptr1, char *ptr2) {
 int strsort_alpha(char **unsorted, char **sorted, 
                   const unsigned int size) {
 	unsigned int i;
-	long ret_i;
+	long int ret_i;
 
 	for(i=0; i<size; i++) {
 		if((ret_i = get_smallest_word_i(unsorted, size)) == -1)
@@ -99,11 +99,11 @@ int strsort_alpha(char **unsorted, char **sorted,
  * Return the index of the word that has letters with a 
  * lowest value in the array of pointers. 
  */
-static long get_smallest_word_i(char **array, const unsigned int size) {
-	unsigned int i, smallest_word_i;
+static long int get_smallest_word_i(char **array, const unsigned int size) {
 	char *smallest_word = NULL;
 	char *current_word = NULL;
-	long retval = -1; 
+	long int smallest_word_i; 
+	unsigned int i;
 
 	for(i=0, smallest_word_i=0; i<size; i++) {
 		if(array[i] == NULL)
@@ -127,12 +127,12 @@ static long get_smallest_word_i(char **array, const unsigned int size) {
 			smallest_word_i = i;
 		}
 	}
-	if(!errno)
-		retval = smallest_word_i;
+	if(errno)
+		smallest_word_i = -1;
 
 	two_chars_cleanup(smallest_word, current_word);
 	
-	return retval;
+	return smallest_word_i;
 }
 
 
@@ -142,8 +142,8 @@ static long get_smallest_word_i(char **array, const unsigned int size) {
  */
 static void adjust_val_after_alpha_cmp(char **smallest_word, 
                                        char **current_word, 
-                                       unsigned int *smallest_word_i, 
-									   const unsigned int current_word_i) {
+                                       long int *smallest_word_i, 
+									   unsigned int current_word_i) {
 	free(*smallest_word);
 	*smallest_word = *current_word;
 	*smallest_word_i = current_word_i;
@@ -204,7 +204,6 @@ unsigned int count_words(const char *line) {
 	for(i=0, words=0; line[i]!='\0'; i++) {
 		if(isspace(line[i]))
 			inside = 0;
-		
 		else {
  			if(!inside) 
 				words++;

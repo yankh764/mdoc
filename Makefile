@@ -23,7 +23,7 @@ $(OBJDIR)/%.c.o: %.c
 
 
 
-.PHONY: clean install uninstall all gdb
+.PHONY: clean install uninstall all
 
 
 

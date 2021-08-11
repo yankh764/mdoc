@@ -18,7 +18,6 @@
 /* Static Functions Prototype */
 static struct users_configs *input_configs();
 static void write_configs(FILE *, const struct users_configs *);
-static void *alloc_users_configs();
 static char *get_line_inf(FILE *);
 static char *input_docs_dir_path();
 static char *input_pdf_viewer_name();
@@ -26,6 +25,7 @@ static char *input_add_args();
 static void null_users_configs(struct users_configs *);
 static void *alloc_users_configs();
 static void free_and_null_users_configs(struct users_configs **);
+static struct users_configs * read_config_file(FILE *);
 
 
 static char *get_line_inf(FILE *stream) {
@@ -68,7 +68,8 @@ static char *input_add_args() {
 static struct users_configs *input_configs() { 
     struct users_configs *input;
 
-	if((input = alloc_users_configs()))
+	if((input = alloc_users_configs())) {
+		null_users_configs(input);
 		/*
 		 * Get all the necessary input from the user.
 		 * Note: inputting add_args is optional, so the program
@@ -80,6 +81,7 @@ static struct users_configs *input_configs() {
 		      errno))
 			/* Failure */
 			 free_and_null_users_configs(&input);
+	}
 
     return input; 
 }
@@ -133,29 +135,39 @@ static void write_configs(FILE *fp, const struct users_configs *configs) {
 
 
 struct users_configs *read_configs(const char *abs_config_path) {
-	struct users_configs *retval = NULL;
 	struct users_configs *configs = NULL;
 	FILE *fp;
 	
 	if((fp = fopen_inf(abs_config_path, "r"))) {
-		if((configs = alloc_users_configs())) {
-			null_users_configs(configs);
+		configs = read_config_file(fp);
 
-			if((configs->docs_dir_path = get_line_inf(fp)) && 
-			   (configs->pdf_viewer = get_line_inf(fp))    &&
-			   ((configs->add_args = get_line(fp))         || 
-				 !errno))
-				retval = configs;
-		}
-
-		if(fclose_inf(fp))
-			retval = NULL;
+		if(fclose_inf(fp) && configs)
+			free_and_null_users_configs(&configs);
 	}
 
-	if(!retval && configs)
-		free_users_configs(configs);
+	return configs;
+}
 
-	return retval;
+
+static struct users_configs * read_config_file(FILE *fp) {
+	struct users_configs *configs;
+	
+	if((configs = alloc_users_configs())) {
+		null_users_configs(configs);
+		/*
+		 * Get all the necessary config sections from the file.
+		 * Note: reading add_args is optional, so the program
+		 * will fail only if it's missing due to an error.
+		 */
+		if(!(configs->docs_dir_path = get_line_inf(fp)) ||
+		   !(configs->pdf_viewer = get_line_inf(fp))    ||
+		   (!(configs->add_args = get_line(fp))         &&
+			  errno))
+			/* Failure */
+			free_and_null_users_configs(&configs);
+	}
+
+	return configs;
 }
 
 
@@ -176,4 +188,3 @@ void free_users_configs(struct users_configs *ptr) {
 	
 	free(ptr);
 }
-
