@@ -55,7 +55,7 @@ And a lot more... See [Mdoc Help Message](#mdoc-help-message)
     ```
 
 ## Usage
-* It's very recommended to read the help message before using the program. You can do that by typing:
+* It's highly recommended to read the help message before using the program. You can do that by typing:
     ```Bash
     USER # mdoc
     ```
@@ -131,4 +131,4 @@ After doing the previous steps you will be ready to enjoy your new document mana
 
 
 ## Contributing
-Pull requests are welcomed and appreciated.
+Pull requests are welcomed...

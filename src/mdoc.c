@@ -1005,7 +1005,7 @@ void display_help(const char *name) {
 		   
 		   "\n"
 		   
-		   "  4. You can use the -a optoin with the -c, -d, -l and -o options instead\n"
+		   "  4. You can use the -a optoin with the -c, -l, -d and -o options instead\n"
 	       "     of passing an actual argument.\n" 
 
 		   "\n"
