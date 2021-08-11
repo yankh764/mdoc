@@ -1,6 +1,6 @@
 # Mdoc - A command-line tool for managing your documents
 Mdoc is an improved version of my [Bash Script](https://github.com/yankh764/rdoc) written in C.  
-Just as it's description says, it's A command-line tool for managing your documents and easing your life.  
+Just as it's description says, it's a command-line tool for managing your documents and easing your life.  
 I started devoloping it just out of boredom and of course because I love writing code.
   
 This program is dedicated to all the command-line lovers that also has lots of documents or  

@@ -48,13 +48,14 @@ static char *get_doc_path(const char *, const char *, bool);
 static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
 static struct l_list *get_last_node(const struct l_list *);
+static char *prep_open_doc_argv(char **, const char *, const char *, const char *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
 static void adj_search_for_doc_node_val(struct l_list *, const char *, const size_t); 
 static void print_docs_colorful(const struct l_list *);
 static bool dot_entry(const char *); 
-static int check_save_doc_name(const char *, const char *, bool);
+static int if_save_doc_name(const char *, const char *, bool);
 static void print_docs_no_color(const struct l_list *);
 static void save_l_list_obj(const struct l_list *, char **);
 static unsigned int get_argc_val(const char *);
@@ -226,8 +227,8 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 			free_and_null((void **) &new_path);
 
 			if(S_ISREG(stbuf.st_mode)) {
-				if((ret = check_save_doc_name(entry->d_name, 
-			                                  str, ignore_case)) == 1) {
+				if((ret = if_save_doc_name(entry->d_name, 
+			                               str, ignore_case)) == 1) {
 					len = strlen(entry->d_name) + 1;
 				
 					if(!doc_list_begin) {
@@ -276,7 +277,7 @@ static void adj_search_for_doc_node_val(struct l_list *current_node,
 /* Check if to save the document name to the document list.
  * Return 1 for yes, 0 for no and -1 for error.
  */
-static int check_save_doc_name(const char *doc_name, 
+static int if_save_doc_name(const char *doc_name, 
                                const char *str, bool ignore_case) {
 	/* If str is NULL, save every 
 	   file name to the linked list */
@@ -448,17 +449,26 @@ static char *get_doc_path_retval(char *new_path, char *ret_path) {
 }
 
 
-void prep_open_doc_argv(char **argv, const char *pdf_viewer, 
-                        char *add_args, const char *doc_path) {
+/*
+ * The funtion will return the address of the dynamic copy of add_args
+ * (if there was any) so open_founded_doc_path() could free it after 
+ * finishing from the argv.
+ */
+static char *prep_open_doc_argv(char **argv, const char *pdf_viewer, 
+                                const char *add_args, const char *doc_path) {
+	char *add_args_cp = NULL;
 	unsigned int i = 0;
 
 	argv[i++] = (char *) pdf_viewer;
 
 	if(add_args)
-		i = prep_add_args(argv, add_args, i);
+		if((add_args_cp = strcpy_dynamic(add_args)))
+			i = prep_add_args(argv, add_args_cp, i);
 
 	argv[i++] = (char *) doc_path;
 	argv[i] = NULL;
+
+	return add_args_cp;
 }
 
 
@@ -485,13 +495,24 @@ static int open_doc(char *const *argv)
 }
 
 
-int open_founded_doc_path(struct users_configs *configs, const char *doc_path) {
+int open_founded_doc_path(const struct users_configs *configs, const char *doc_path) {
     const unsigned int argc = get_argc_val(configs->add_args);
     char *argv[argc+1];
+	char *add_args_cp;
+	int retval = -1;
 
-    prep_open_doc_argv(argv, configs->pdf_viewer, configs->add_args, doc_path);
+    add_args_cp = prep_open_doc_argv(argv, configs->pdf_viewer, configs->add_args, doc_path);
+	/* 
+	 * Make sure that no error occured if strcpy_dynamic()
+	 * was used in prep_open_doc_argv()
+	 */
+	if(!errno)
+		retval = open_doc(argv);
 
-    return open_doc(argv);
+	if(add_args_cp)
+		free(add_args_cp);
+
+    return retval;
 }
 
 
