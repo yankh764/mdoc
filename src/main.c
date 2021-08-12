@@ -18,11 +18,12 @@
 #include "informative.h"
 #include "mdoc.h"
 
-/* Exit Codes */
-#define PROG_ERROR 2
-#define CLI_ERROR  1
-#define SUCCES     0
 
+enum EXIT_CODES { 
+    PROG_ERROR = 2,
+    CLI_ERROR = 1,
+    SUCCES = 0
+};
 
 char *prog_name_inf;
 
