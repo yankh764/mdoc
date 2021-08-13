@@ -70,6 +70,13 @@ static struct users_configs *input_configs() {
 
 	if((input = alloc_users_configs())) {
 		null_users_configs(input);
+		/* 
+		 * Reset errno to 0 to be sure 
+		 * that printf() didn't change it 
+		 * since it's critical for the if()
+		 * statement on line 87.
+		 */
+		errno = 0;
 		/*
 		 * Get all the necessary input from the user.
 		 * Note: inputting add_args is optional, so the program
@@ -154,6 +161,13 @@ static struct users_configs * read_config_file(FILE *fp) {
 	
 	if((configs = alloc_users_configs())) {
 		null_users_configs(configs);
+		/* 
+		 * Reset errno to 0 to be sure 
+		 * that printf() didn't change it 
+		 * since it's critical for the if()
+		 * statement on line 178.
+		 */
+		errno = 0;
 		/*
 		 * Get all the necessary config sections from the file.
 		 * Note: reading add_args is optional, so the program

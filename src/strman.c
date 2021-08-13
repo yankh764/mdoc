@@ -7,7 +7,6 @@
 ---------------------------------------------------------
 */
 
-#include <errno.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -104,14 +103,17 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 	char *current_word = NULL;
 	long int smallest_word_i; 
 	unsigned int i;
+	bool error = 0;
 
 	for(i=0, smallest_word_i=0; i<size; i++) {
 		if(array[i] == NULL)
 			continue;
 		
 		if(smallest_word) {
-			if(!(current_word = small_let_copy(array[i])))
+			if(!(current_word = small_let_copy(array[i]))) {
+				error = 1;
 				break;
+			}
 			
 			/* If current_word needs to come before smallest_word */
 			if(alpha_cmp(smallest_word, current_word))
@@ -121,13 +123,15 @@ static long int get_smallest_word_i(char **array, const unsigned int size) {
 				free_and_null((void **) &current_word);
 		}
 		else {
-			if(!(smallest_word = small_let_copy(array[i])))
+			if(!(smallest_word = small_let_copy(array[i]))) {
+				error = 1;
 				break;
+			}
 			
 			smallest_word_i = i;
 		}
 	}
-	if(errno)
+	if(error)
 		smallest_word_i = -1;
 
 	two_chars_cleanup(smallest_word, current_word);

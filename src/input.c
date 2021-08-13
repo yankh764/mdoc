@@ -7,7 +7,6 @@
 ----------------------------------------------------------
 */
 
-#include <errno.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include "informative.h"
@@ -53,8 +52,12 @@ char *get_line(FILE *stream) {
 	if(line) 
 		if((line = realloc_inf(line, sizeof(char) * (i+1))))	
 			line[i] = '\0';	
-	
-	if(errno && line_address)
+	/* 
+	 * If line_address != NULL whereas line = NULL this means
+	 * that there was memory allocated by realloc_inf() but it also
+	 * failed in the last call and returned NULL to line.
+	 */
+	if(line_address && !line)
 		free(line_address);
 
 	return line;

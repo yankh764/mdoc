@@ -461,9 +461,16 @@ static char *prep_open_doc_argv(char **argv, const char *pdf_viewer,
 
 	argv[i++] = (char *) pdf_viewer;
 
-	if(add_args)
+	if(add_args) {
+		/*
+		 * Reset errno to 0 since it'll be cruicial for the 
+		 * test in open_founded_doc_path()
+		 */
+		errno = 0;
+
 		if((add_args_cp = strcpy_dynamic(add_args)))
 			i = prep_add_args(argv, add_args_cp, i);
+	}
 
 	argv[i++] = (char *) doc_path;
 	argv[i] = NULL;
@@ -995,7 +1002,7 @@ void display_help(const char *name) {
 
 	       "  2. When generating the configurations, if it's desired to pass additional\n"
 		   "     arguments for the documents execution command, please separate them with\n"
-		   "     a space. Example: --agr1 --arg2 --arg3...\n"
+		   "     a space. Example: --arg1 --arg2 --arg3...\n"
 		   
 		   "\n"
 
