@@ -109,13 +109,13 @@ After doing the previous steps you will be ready to enjoy your new document mana
 
       2. When generating the configurations, if it's desired to pass additional
          arguments for the documents execution command, please separate them with
-         a space. Example: --agr1 --arg2 --arg3...
+         a space. Example: --arg1 --arg2 --arg3...
 
       3. By default when using the -o option you can't open more than a document
          in a run, but you can use the -n option with it to give the program the
          approval to open more than one document in a run.
 
-      4. You can use the -a optoin with the -c, -d, -l and -o options instead
+      4. You can use the -a optoin with the -c, -l, -d and -o options instead
          of passing an actual argument.
 
       5. The [TIME] section in the -d option stands for the last modification
