@@ -198,7 +198,13 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 	init_search_for_doc_ptrs(&doc_list_rec_begin, &doc_list_begin,
 	                         &current_node_rec, &current_node, &new_path);
 	
-	if((dp = opendir_inf(dir_path)))
+	if((dp = opendir_inf(dir_path))) {
+		/* 
+		 * To distinguish end of stream 
+		 * from an error in readdir_inf()
+		 */
+		errno = 0;
+
 		while((entry = readdir_inf(dp))) {
 			if(dot_entry(entry->d_name)) 
 				continue;
@@ -247,6 +253,7 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 					break;
 			}
 		}
+	}
 	
 	if(errno || prev_error)
 		search_for_doc_error(new_path, &doc_list_begin, 
@@ -369,7 +376,9 @@ static char *get_doc_path(const char *dir_path,
 	struct stat stbuf;
 	DIR *dp;
 
-	if((dp = opendir_inf(dir_path)))
+	if((dp = opendir_inf(dir_path))) {
+		/* To distinguish end of stream from an error in readdir_inf() */
+		errno = 0;
 		/* 
 		 * I decided to use goto here so it'll be easier to distinguish
 		 * between the errors (which uses break statement) and the succes
@@ -398,7 +407,7 @@ static char *get_doc_path(const char *dir_path,
 		
 			free_and_null((void **) &new_path);
 		}
-
+	}
     /* The if statemnt is neccesarry to distinguish between
      * errors and unfouded document path.
      */
