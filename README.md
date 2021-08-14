@@ -55,7 +55,7 @@ And a lot more... See [Mdoc Help Message](#mdoc-help-message)
     ```
 
 ## Usage
-* It's highly recommended to read the help message before using the program. You can do that by typing:
+* It's highly recommended to read the [help message](#mdoc-help-message) before using the program. You can do that by typing:
     ```
     $ mdoc
     ```
