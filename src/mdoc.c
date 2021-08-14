@@ -997,7 +997,6 @@ void display_help(const char *name) {
 	       " -c \t\t Count the existing documents with the passed string sequence in their names\n"
 	       " -l \t\t List the existing documents with the passed string sequence in their names\n"
 	       " -d \t\t Display details on the documents with the passed string sequence in their names\n"
-		   //" -f \t\t List all documents in the directories with the passed string sequence in their names\n"
 		   " -o \t\t Open the founded document with the passed string sequence in it's name\n"
 	       " -R \t\t Disable recursive searching for the documents\n"
 	       " -C \t\t Disable colorful output\n"
