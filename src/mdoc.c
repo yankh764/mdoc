@@ -377,7 +377,10 @@ static char *get_doc_path(const char *dir_path,
 	DIR *dp;
 
 	if((dp = opendir_inf(dir_path))) {
-		/* To distinguish end of stream from an error in readdir_inf() */
+		/* 
+		 * To distinguish end of stream 
+		 * from an error in readdir_inf() 
+		 */
 		errno = 0;
 		/* 
 		 * I decided to use goto here so it'll be easier to distinguish
@@ -991,10 +994,11 @@ void display_help(const char *name) {
 	       " -a \t\t Include all documents\n"
 	       " -i \t\t Ignore case distinctions while searching for the documents\n"
 	       " -n \t\t Allow numerous documents opening (execution)\n"
-	       " -c \t\t Count the existing documents with the passed string sequence\n"
-	       " -l \t\t List the existing documents with the passed string sequence\n"
-	       " -d \t\t Display details on the documents with the passed string sequence\n"
-		   " -o \t\t Open the founded document with the passed string sequence\n"
+	       " -c \t\t Count the existing documents with the passed string sequence in their names\n"
+	       " -l \t\t List the existing documents with the passed string sequence in their names\n"
+	       " -d \t\t Display details on the documents with the passed string sequence in their names\n"
+		   //" -f \t\t List all documents in the directories with the passed string sequence in their names\n"
+		   " -o \t\t Open the founded document with the passed string sequence in it's name\n"
 	       " -R \t\t Disable recursive searching for the documents\n"
 	       " -C \t\t Disable colorful output\n"
            
