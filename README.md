@@ -92,10 +92,10 @@ After doing the previous steps you will be ready to enjoy your new document mana
      -a 		 Include all documents
      -i 		 Ignore case distinctions while searching for the documents
      -n 		 Allow numerous documents opening (execution)
-     -c 		 Count the existing documents with the passed string sequence
-     -l 		 List the existing documents with the passed string sequence
-     -d 		 Display details on the documents with the passed string sequence
-     -o 		 Open the founded document with the passed string sequence
+     -c 		 Count the existing documents with the passed string sequence in their names
+     -l 		 List the existing documents with the passed string sequence in their names
+     -d 		 Display details on the documents with the passed string sequence in their names
+     -o 		 Open the founded document with the passed string sequence in it's name
      -R 		 Disable recursive searching for the documents
      -C 		 Disable colorful output
 
