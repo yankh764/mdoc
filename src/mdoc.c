@@ -253,19 +253,16 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 					break;
 			}
 		}
+
+		closedir_inf(dp);
 	}
 	
 	if(errno || prev_error)
 		search_for_doc_error(new_path, &doc_list_begin, 
 							 &doc_list_rec_begin);
 
-	if(dp)
-		/* If error occured while closing dp and no cleanup have been done already */
-		if(closedir_inf(dp) && !prev_error) 
-			search_for_doc_error(new_path, &doc_list_begin, 
-								 &doc_list_rec_begin);
-	
-	return search_for_doc_retval(current_node, doc_list_begin, 
+	return search_for_doc_retval(current_node, 
+								 doc_list_begin, 
 								 doc_list_rec_begin);
 }
 
