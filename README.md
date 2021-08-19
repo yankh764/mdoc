@@ -138,3 +138,7 @@ After doing the previous steps you will be ready to enjoy your new document mana
 
 ## Contributing
 Pull requests are welcomed...
+
+
+## Known Issues 
+* An unexpected results may occur if you have files with an identical names in diffrent locations.
