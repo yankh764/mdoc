@@ -94,7 +94,7 @@ static void print_doc_modes_color(const mode_t);
 static void print_doc_modes_no_color(const mode_t); 
 static void remove_extra_space(char *);
 static unsigned int get_extra_space_i(const char *);
-
+static int save_proper_dir_content(const char *, const char*, bool, bool, struct l_list **, struct l_list **);
 
 
 /*
@@ -215,21 +215,11 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 			if(stat_inf(new_path, &stbuf))
 				break;
 
-			if(S_ISDIR(stbuf.st_mode) && recursive) {
-				/* If still not initialized try to initialize it */
-				if(!doc_list_rec_begin) { 
-					if((doc_list_rec_begin = search_for_doc(new_path, str, 
-					                                        ignore_case, recursive)))
-						current_node_rec = get_last_node(doc_list_rec_begin);
-				}	
-				else
-					if((current_node_rec->next = search_for_doc(new_path, str, 
-					                                            ignore_case, recursive)))
-						current_node_rec = get_last_node(current_node_rec->next);
-		
-				if(prev_error)
+			if(S_ISDIR(stbuf.st_mode) && recursive) 
+				if(save_proper_dir_content(new_path, str, ignore_case, recursive, 
+									       &doc_list_rec_begin, &current_node_rec))
 					break;
-			}
+
 			free_and_null((void **) &new_path);
 
 			if(S_ISREG(stbuf.st_mode)) {
@@ -683,20 +673,12 @@ search_for_doc_multi_dir_split(char *dirs_path, const char *str,
 	unsigned int ret;
 
 	for(; (ret = space_to_null(dirs_path)); dirs_path+=ret)
-		if(*dirs_path != '\0') {
-			if(!doc_list_begin) {
-				if((doc_list_begin = search_for_doc(dirs_path, str, ignore_case, rec)))
-					current_node = get_last_node(doc_list_begin);
-			}
-			else
-				if((current_node->next = search_for_doc(dirs_path, str, ignore_case, rec)))
-					current_node = get_last_node(current_node->next);
-
-			if(prev_error) {
+		if(*dirs_path != '\0') 
+			if(save_proper_dir_content(dirs_path, str, ignore_case, rec, 
+								       &doc_list_begin, &current_node)) {
 				search_for_doc_multi_dir_err(&doc_list_begin);
 				break;
 			}
-		}
 
 	return doc_list_begin;
 }
@@ -976,7 +958,33 @@ static void print_doc_modes_no_color(const mode_t mode)
 }
 
 
-void display_help(const char *name) {
+
+/******************************************************************************/
+/* From now on i'll try to follow The Linux kernel coding style, more or less */
+/******************************************************************************/
+
+
+static int save_proper_dir_content(const char *dir_path,
+								   const char *str,
+								   bool ignore, bool rec,
+								   struct l_list **beginning,
+								   struct l_list **current_node)
+{
+	if (!(*beginning)) {
+		if ((*beginning = search_for_doc(dir_path, str, ignore, rec)))
+			*current_node = get_last_node(*beginning);
+	} else {
+		if (((*current_node)->next = search_for_doc(dir_path, str, ignore, rec)))
+			*current_node = get_last_node((*current_node)->next);
+	}
+
+	return prev_error ?
+		-1 : 0;
+}
+
+
+void display_help(const char *name) 
+{
 	printf("Usage: %s [OPTIONS]... ARGUMENT\n", name);
 	printf(
 	       "A command-line tool for managing your documents and easing your life.\n"
