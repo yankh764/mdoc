@@ -141,4 +141,4 @@ Pull requests are welcomed...
 
 
 ## Known Issues 
-* An unexpected results may occur if you have files with an identical names in diffrent locations.
+* An unexpected results may occur if you have files with an identical names in different locations.
