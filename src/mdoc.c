@@ -45,28 +45,26 @@ struct meas_unit {
 /* Actual code starts on line 100 */
 /*--------------------------------*/
 static char *get_doc_path(const char *, const char *, bool);
-static struct l_list *alloc_l_list_obj(const size_t);
 static char *get_entry_path(const char *, const char *);
-static struct l_list *get_last_node(const struct l_list *);
+static struct doc_list *get_last_node(const struct doc_list *);
 static char *prep_open_doc_argv(char **, const char *, const char *, const char *);
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
-static void adj_search_for_doc_node_val(struct l_list *, const char *, const size_t); 
+static void adjust_doc_list_members(struct doc_list *, const char *, const char *); 
 static void print_docs_colorful(const struct l_list *);
 static bool dot_entry(const char *); 
-static int if_save_doc_name(const char *, const char *, bool);
+static int if_save_doc(const char *, const char *, bool);
 static void print_docs_no_color(const struct l_list *);
 static void save_l_list_obj(const struct l_list *, char **);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
 static void reorganize_l_list_alpha(struct l_list *, char **);
-static void *alloc_l_list();
+static void *alloc_doc_list();
 static int open_doc(char *const *);
 static unsigned int prep_add_args(char **, char *, unsigned int);
 static struct l_list *search_for_doc(const char *, const char *, bool, bool);
 static struct l_list *search_for_doc_retval(struct l_list *, struct l_list *,  struct l_list *);
-static void init_search_for_doc_ptrs(struct l_list **, struct l_list **, struct l_list **, struct l_list **, char **);
 static void search_for_doc_multi_dir_err(struct l_list **);
 static void free_and_null_l_list(struct l_list **ptr);
 static void print_docs_num_color(const unsigned int, const char *);
@@ -95,59 +93,56 @@ static void print_doc_modes_no_color(const mode_t);
 static void remove_extra_space(char *);
 static unsigned int get_extra_space_i(const char *);
 static int save_proper_dir_content(const char *, const char*, bool, bool, struct l_list **, struct l_list **);
+static struct doc_list *free_doc_list_node(struct doc_list *);
+static struct doc_list *save_doc(const char *, const char *);
+
+
+
+static void *alloc_doc_list() 
+{
+	return malloc_inf(sizeof(struct doc_list));
+}
+
+
+void free_doc_list(struct doc_list *ptr) 
+{
+	while ((ptr = free_doc_list_node(ptr)))
+		;
+}
 
 
 /*
- * Return a pointer to allocated l_list structure that also 
- * has an allocated obj to it with the size of obj_size.
+ * Free doc_list node and return a pointer to the next one.
  */
-static struct l_list *alloc_l_list_obj(const size_t obj_size) {
-	struct l_list *ptr;
-
-	if((ptr = alloc_l_list()))
-		if(!(ptr->obj = malloc_inf(sizeof(char) * obj_size)))
-			free_and_null((void **) &ptr);
-
-	return ptr;
-}
-
-
-static void *alloc_l_list() 
+static struct doc_list *free_doc_list_node(struct doc_list *ptr)
 {
-	return malloc_inf(sizeof(struct l_list));
+	struct doc_list *next = ptr->next;
+
+	free(ptr->path);
+	free(ptr);
+
+	return next;
 }
 
 
-void free_l_list(struct l_list *ptr) {
-	struct l_list *prev_ptr;
-
-	while(ptr) {
-		free(ptr->obj);
-		
-		prev_ptr = ptr;
-		ptr = ptr->next;	
-		
-		free(prev_ptr);
-	}
-}
-
-
-static char *get_entry_path(const char *dir_path, const char *entry_name) {
+static char *get_entry_path(const char *dir_path, const char *entry_name) 
+{
     const size_t path_len = strlen(dir_path) + strlen(entry_name) + 2;
     char *entry_path;
 
-    if((entry_path = malloc_inf(sizeof(char) * path_len)))
+    if ((entry_path = malloc_inf(sizeof(char) * path_len)))
         snprintf(entry_path, path_len, "%s/%s", dir_path, entry_name);
 
     return entry_path;
 }
 
 
-static struct l_list *get_last_node(const struct l_list *ptr) {
-	struct l_list *prev;
+static struct doc_list *get_last_node(const struct doc_list *ptr) 
+{
+	struct doc_list *prev;
 
-	for(prev=NULL; ptr; ptr=ptr->next)
-		prev = (struct l_list *) ptr;
+	for (prev=NULL; ptr; ptr=ptr->next)
+		prev = (struct doc_list *) ptr;
 
 	return prev;
 }
@@ -164,82 +159,50 @@ static bool dot_entry(const char *entry_name)
 }
 
 
-static void init_search_for_doc_ptrs(struct l_list **ptr1, struct l_list **ptr2,
-                                     struct l_list **ptr3, struct l_list **ptr4,
-									 char **char_ptr) {
-	*ptr1 = NULL;
-	*ptr2 = NULL;
-	*ptr3 = NULL;
-	*ptr4 = NULL;
-	*char_ptr = NULL;
-}
-
-
 /*
  * The function will search dor the passed str sequence in dir_path
- * then it will save the founded ones in the linked list. If str is NULL
+ * then it will save the founded ones in the doc_list. If str is NULL
  * it'll save all the docs to the linked list.
  */
-static struct l_list *search_for_doc(const char *dir_path, const char *str, 
-                                     bool ignore_case, bool recursive) {
-	struct l_list *current_node_rec, *current_node;
-	/* The begnning of the documents list that is 
-	   created, filled and returned by the recursion */
-	struct l_list *doc_list_rec_begin;
-	/* The beginning of the documents list that is filled by the function */	
-	struct l_list *doc_list_begin; 
+static struct doc_list *search_for_doc(const char *dir_path, const char *str, 
+                                       bool ignore_case, bool recursive) 
+{
+	struct doc_list *doc_list_rec_begin = NULL;
+	struct doc_list *current_node_rec = NULL;
+	struct doc_list *doc_list_begin = NULL; 
+	struct doc_list *current_node = NULL;
 	struct dirent *entry;
 	struct stat stbuf;
 	char *new_path;
-	size_t len;
 	int ret;
 	DIR *dp;
 
-	init_search_for_doc_ptrs(&doc_list_rec_begin, &doc_list_begin,
-	                         &current_node_rec, &current_node, &new_path);
-	
-	if((dp = opendir_inf(dir_path))) {
+	if ((dp = opendir_inf(dir_path))) {
 		/* 
 		 * To distinguish end of stream 
 		 * from an error in readdir_inf()
 		 */
 		errno = 0;
 
-		while((entry = readdir_inf(dp))) {
-			if(dot_entry(entry->d_name)) 
+		while ((entry = readdir_inf(dp))) {
+			if (dot_entry(entry->d_name)) 
 				continue;
 			
-			if(!(new_path = get_entry_path(dir_path, entry->d_name)))
+			if (!(new_path = get_entry_path(dir_path, entry->d_name)))
 				break;
 			
-			if(stat_inf(new_path, &stbuf))
+			if (stat_inf(new_path, &stbuf))
 				break;
 
-			if(S_ISDIR(stbuf.st_mode) && recursive) 
-				if(save_proper_dir_content(new_path, str, ignore_case, recursive, 
+			if (S_ISDIR(stbuf.st_mode) && recursive) 
+				if (save_proper_dir_content(new_path, str, ignore_case, recursive, 
 									       &doc_list_rec_begin, &current_node_rec))
 					break;
 
-			free_and_null((void **) &new_path);
-
-			if(S_ISREG(stbuf.st_mode)) {
-				if((ret = if_save_doc_name(entry->d_name, 
-			                               str, ignore_case)) == 1) {
-					len = strlen(entry->d_name) + 1;
+			if (S_ISREG(stbuf.st_mode)) {
+				if ((ret = if_save_doc(entry->d_name, str, ignore_case)) == 1) {
 				
-					if(!doc_list_begin) {
-						if(!(doc_list_begin = alloc_l_list_obj(len)))
-							break;
-			
-						current_node = doc_list_begin;
-					}
-					else
-						if(!(current_node = current_node->next = alloc_l_list_obj(len)))
-							break;
-				
-					adj_search_for_doc_node_val(current_node, entry->d_name, len);
-				}
-				else if(ret == -1)
+				} else if (ret == -1)
 					break;
 			}
 		}
@@ -247,7 +210,7 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 		closedir_inf(dp);
 	}
 	
-	if(errno || prev_error)
+	if (errno || prev_error)
 		search_for_doc_error(new_path, &doc_list_begin, 
 							 &doc_list_rec_begin);
 
@@ -257,31 +220,42 @@ static struct l_list *search_for_doc(const char *dir_path, const char *str,
 }
 
 
-/*
- * Pass doc_name to current_node->obj and terminate current_node->next.
- */
-static void adj_search_for_doc_node_val(struct l_list *current_node, 
-                                        const char *doc_name, const size_t len) {
-	snprintf(current_node->obj, len, "%s", doc_name);
-	/* Mark the next node as empty in case the current one is the last */
+static void adjust_doc_list_members(struct doc_list *current_node, 
+                                    const char *doc_path, const char *doc_name) 
+{
+	current_node->path = (char *) doc_path;
+	current_node->name = strstr(doc_path, doc_name);
+	/* Mark the next node as empty in case the current one is the last one */
 	current_node->next = NULL;
+}
+
+
+static struct doc_list *save_doc(const char *doc_path, const char *doc_name)
+{
+	struct doc_list *node;
+
+	if ((node = alloc_doc_list()))
+		adjust_doc_list_members(node, doc_path, doc_name);
+
+	return node;
 }
 
 
 /* Check if to save the document name to the document list.
  * Return 1 for yes, 0 for no and -1 for error.
  */
-static int if_save_doc_name(const char *doc_name, 
-                               const char *str, bool ignore_case) {
+static int if_save_doc(const char *doc_name, 
+                       const char *str, bool ignore_case) 
+{
 	/* If str is NULL, save every 
 	   file name to the linked list */
-	if(!str)
+	if (!str)
 		return 1;
 	
-	if(ignore_case)
+	if (ignore_case)
 		return strstr_i(doc_name, str);
 
-	return (strstr(doc_name, str) != NULL) ? 
+	return strstr(doc_name, str) ? 
 		1 : 0;
 }
 
