@@ -10,7 +10,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include "informative.h"
 #include "strman.h"
 
@@ -21,19 +20,22 @@ static long int get_smallest_word_i(char **, const unsigned int);
 static bool alpha_cmp(const char *, const char *);
 static void free_and_null(void **);
 static void adjust_val_after_alpha_cmp(char **, char **, long int *, unsigned int);
+static void convert_to_lower(char *);
+static char *small_let_copy(const char *);
 
 
 /*
  * Make a small letters copy of str.
  */
-char *small_let_copy(const char *str) {
+char *small_let_copy(const char *str) 
+{
 	const size_t len = strlen(str) + 1;
 	char *str_small; 
 	unsigned int i;
 
-	if((str_small = malloc_inf(sizeof(char) * len))) {
-		for(i=0; str[i]!='\0'; i++) {
-			if(isupper(str[i]))
+	if ((str_small = malloc_inf(sizeof(char) * len))) {
+		for (i=0; str[i]!='\0'; i++) {
+			if (isupper(str[i]))
 				str_small[i] = tolower(str[i]);
 			else
 				str_small[i] = str[i];
@@ -45,23 +47,35 @@ char *small_let_copy(const char *str) {
 }
 
 
+static void convert_to_lower(char *str) 
+{
+	unsigned int i;
+
+	for (i=0; str[i]!='\0'; i++)
+		if (isupper(str[i]))
+			str[i] = tolower(str[i]);
+}
+
+
 /*
  * The same as strstr() but with "ignored case distinction"
- * and diffrent return values. 0 = didn't find, 1 = found, -1 = fail.
+ * and diffrent return values. 0 = didn't find, 1 = found.
  */
-int strstr_i(const char *haystack, const char *needle) {
-	char *haystack_small = NULL; 
-	char *needle_small = NULL; 
-	int retval = -1;
+bool strstr_i(const char *haystack, const char *needle) 
+{
+	const size_t haystack_len = strlen(haystack) + 1;
+	const size_t needle_len = strlen(needle) + 1;
+	char haystack_cp[haystack_len]; 
+	char needle_cp[needle_len]; 
 	
-	/* If made small letter copy of haystack and needle sucessfully */
-	if((haystack_small = small_let_copy(haystack)) 
-	 && (needle_small = small_let_copy(needle)))
-		retval = strstr(haystack_small, needle_small) ? 1 : 0;
-	
-	two_chars_cleanup(haystack_small, needle_small);
+	memcpy(haystack_cp, haystack, haystack_len);
+	memcpy(needle_cp, needle, needle_len);
 
-	return retval;
+	convert_to_lower(haystack_cp);
+	convert_to_lower(needle_cp);
+
+	return strstr(haystack_cp, needle_cp) ? 
+		1 : 0;
 }
 
 

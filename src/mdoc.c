@@ -51,7 +51,7 @@ static char *prep_open_doc_argv(char **, const char *, const char *, const char 
 static void search_for_doc_error(char *, struct l_list **, struct l_list **);
 static void get_doc_path_error(char **, char **);
 static char *get_doc_path_retval(char *, char *);
-static void adjust_doc_list_members(struct doc_list *, const char *, const char *); 
+static int adjust_doc_list_members(struct doc_list *, const char *, const char *); 
 static void print_docs_colorful(const struct l_list *);
 static bool dot_entry(const char *); 
 static int if_save_doc(const char *, const char *, bool);
@@ -95,6 +95,7 @@ static unsigned int get_extra_space_i(const char *);
 static int save_proper_dir_content(const char *, const char*, bool, bool, struct l_list **, struct l_list **);
 static struct doc_list *free_doc_list_node(struct doc_list *);
 static struct doc_list *save_doc(const char *, const char *);
+static int save_doc_to_proper_var(const char *, const char *, struct doc_list **, struct doc_list **);
 
 
 
@@ -119,6 +120,7 @@ static struct doc_list *free_doc_list_node(struct doc_list *ptr)
 	struct doc_list *next = ptr->next;
 
 	free(ptr->path);
+	free(ptr->name);
 	free(ptr);
 
 	return next;
@@ -189,10 +191,10 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 				continue;
 			
 			if (!(new_path = get_entry_path(dir_path, entry->d_name)))
-				break;
+				goto free_doc_list;
 			
 			if (stat_inf(new_path, &stbuf))
-				break;
+				goto free_new_path;
 
 			if (S_ISDIR(stbuf.st_mode) && recursive) 
 				if (save_proper_dir_content(new_path, str, ignore_case, recursive, 
@@ -201,11 +203,21 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 
 			if (S_ISREG(stbuf.st_mode)) {
 				if ((ret = if_save_doc(entry->d_name, str, ignore_case)) == 1) {
-				
-				} else if (ret == -1)
-					break;
-			}
+					if (save_doc_to_proper_var(new_path, entry->d_name, &doc_list_begin, &current_node))
+						break;
+
+					continue;
+
+				} else if (ret == -1) {
+					goto free_new_path;	
+				}
+			
+			} 
+			free(new_path);
 		}
+		/* Catch readdir_inf() errors */
+		if (errno)
+			goto free_doc_list;
 
 		closedir_inf(dp);
 	}
@@ -220,13 +232,33 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 }
 
 
-static void adjust_doc_list_members(struct doc_list *current_node, 
-                                    const char *doc_path, const char *doc_name) 
+static int save_doc_to_proper_var(const char *doc_path, const char *doc_name,
+								  struct doc_list **doc_list_begin, 
+								  struct doc_list **current_node)
+{
+	if (!(*doc_list_begin)) {
+		if (!(doc_list_begin = save_doc(doc_path, doc_name)))
+			return -1;
+	} else {
+		if (!((*current_node)->next = save_doc(doc_path, doc_name)))
+			return -1;
+	}
+
+	return 0;
+}
+
+
+static int adjust_doc_list_members(struct doc_list *current_node, 
+                                   const char *doc_path, const char *doc_name) 
 {
 	current_node->path = (char *) doc_path;
-	current_node->name = strstr(doc_path, doc_name);
+	
+	if (!(current_node->name = strcpy_dynamic(doc_name)))
+		return -1;
 	/* Mark the next node as empty in case the current one is the last one */
 	current_node->next = NULL;
+
+	return 0;
 }
 
 
@@ -235,7 +267,8 @@ static struct doc_list *save_doc(const char *doc_path, const char *doc_name)
 	struct doc_list *node;
 
 	if ((node = alloc_doc_list()))
-		adjust_doc_list_members(node, doc_path, doc_name);
+		if (adjust_doc_list_members(node, doc_path, doc_name))
+			free_and_null((void **) &node);
 
 	return node;
 }
