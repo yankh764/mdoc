@@ -24,10 +24,11 @@ static void convert_to_lower(char *);
 static char *small_let_copy(const char *);
 
 
+
 /*
  * Make a small letters copy of str.
  */
-char *small_let_copy(const char *str) 
+static char *small_let_copy(const char *str) 
 {
 	const size_t len = strlen(str) + 1;
 	char *str_small; 
@@ -91,7 +92,8 @@ static void two_chars_cleanup(char *ptr1, char *ptr2) {
  * Sort the array of pointers alphabetically and save it to sorted.
  */
 int strsort_alpha(char **unsorted, char **sorted, 
-                  const unsigned int size) {
+                  const unsigned int size) 
+{
 	unsigned int i;
 	long int ret_i;
 
@@ -258,7 +260,7 @@ char *strcpy_dynamic(const char *src) {
 	if((src_cpy = malloc_inf(sizeof(char) * len)))
 		/*
 		 * I decided to use memcpy() instead of strncpy()
-		 * just because I like it more.
+		 * just because I like it's behaviour more.
 		 */
 		memcpy(src_cpy, src, len);
 

@@ -19,7 +19,7 @@ struct doc_list {
 int sort_docs_alpha(struct doc_list *);
 void free_doc_list(struct doc_list *);
 void display_docs(const struct doc_list *, bool);
-unsigned int count_l_list_nodes(const struct doc_list *);
+unsigned int count_doc_list_nodes(const struct doc_list *);
 void reverse_l_list_obj(struct doc_list *);
 void print_docs_num(const struct doc_list *, bool);
 void display_help(const char *);
