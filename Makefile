@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2 -pipe -march=native -fstack-protector-strong -Wextra \
-		 -Wall -Werror -Wundef -Wformat=2 -Wstrict-overflow=5 -I$(INCLUDE)
+		 -Wall -Wundef -Wformat=2 -Wstrict-overflow=5 -I$(INCLUDE)
 
 DST_DIR = /usr/local/bin
 
