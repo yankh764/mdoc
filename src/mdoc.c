@@ -50,7 +50,7 @@ static void print_docs_colorful(const struct doc_list *);
 static bool dot_entry(const char *); 
 static bool if_save_doc(const char *, const char *, bool);
 static void print_docs_no_color(const struct doc_list *);
-static void save_doc_list_obj(const struct doc_list *, char **);
+static void save_doc_list_names(const struct doc_list *, char **);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
 static void reorganize_doc_list_alpha(struct doc_list *, char **);
@@ -88,15 +88,16 @@ static int save_proper_dir_content(const char *, const char*, bool, bool, struct
 static struct doc_list *free_doc_list_node(struct doc_list *);
 static struct doc_list *save_doc(const char *, const char *, const struct stat *);
 static int save_doc_to_proper_var(const char *, const char *, const struct stat *,  struct doc_list **, struct doc_list **);
-static int close_and_null_dp(DIR **);
 static void free_and_null_doc_list(struct doc_list **); 
 static void catch_readdir_inf_err();
 static void print_doc_name(const char *, bool);
 static void print_doc_name_color(const char *);
 static void print_doc_name_no_color(const char *);
-static char *get_last_mode_time(const time_t);
-static void alloc_stat_struct();
+static char *get_last_mod_time(const time_t);
+static void *alloc_stat_struct();
 static struct stat *get_stat_dynamic(const char *);
+static int print_doc_details(const struct doc_list *, bool);
+static void separate_if_needed(const struct doc_list *);
 
 
 
@@ -122,7 +123,7 @@ static struct doc_list *free_doc_list_node(struct doc_list *ptr)
 
 	free(ptr->path);
 	free(ptr->name);
-	free(ptr->stbuf)
+	free(ptr->stbuf);
 	free(ptr);
 
 	return next;
@@ -163,11 +164,6 @@ static bool dot_entry(const char *entry_name)
 }
 
 
-/*
- * The function will search dor the passed str sequence in dir_path
- * then it will save the founded ones in the doc_list. If str is NULL
- * it'll save all the docs to the linked list.
- */
 static struct doc_list *search_for_doc(const char *dir_path, const char *str, 
                                        bool ignore_case, bool recursive) 
 {
@@ -199,24 +195,24 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 				 */
 				goto free_docs_lists;
 			
-			if ((stbuf = get_stat_dynamic(new_path)))
+			if (!(stbuf = get_stat_dynamic(new_path)))
 				/* 
 				 * Failed to allocate stbuf, so jump upon it and free new_path
 				 * then continue to the rest of the errors labels.
 				 */
 				goto free_new_path;
 
-			if (S_ISDIR(stbuf.st_mode) && recursive) 
-				if (save_proper_dir_content(new_path, str, ignore_case, recursive, 
-									        &doc_list_rec_begin, &current_node_rec))
-					/*
-					 * Both stbuf and new_path are allocated and not passed to
-					 * a doc_list node. So jump to the first label on the errors
-					 * cleanup and start freeing all the allocated variables.
-					 */
-					goto free_stbuf;
-
-			if (S_ISREG(stbuf.st_mode)) {
+			if (S_ISDIR(stbuf->st_mode)) {
+				if (recursive)
+					if (save_proper_dir_content(new_path, str, ignore_case, recursive, 
+										        &doc_list_rec_begin, &current_node_rec))
+						/*
+						 * Both stbuf and new_path are allocated and not passed to
+						 * a doc_list node. So jump to the first label on the errors
+						 * cleanup and start freeing all the allocated variables.
+						 */
+						goto free_stbuf;
+			} else if (S_ISREG(stbuf->st_mode)) {
 				if (if_save_doc(entry->d_name, str, ignore_case)) {
 					if (save_doc_to_proper_var(new_path, entry->d_name, stbuf, 
 											   &doc_list_begin, &current_node))
@@ -235,18 +231,23 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 		}
 		catch_readdir_inf_err();
 
-		if (close_and_null_dp(&dp) || prev_error)
+		if (closedir_inf(dp) || prev_error) {
+			dp = NULL;
 			/* 
 			 * The not passed (to a doc_list node) new_path and stbuf would
 			 * be already freed at the end of the loop. Only structs of 
 			 * doc_list may be allocated, so free them.
 			 */
 			goto free_docs_lists;
+		}
 	} else {
-		/* No variables were allocated, just mark that an error occured */
+		/* 
+		 * No variables were allocated, just mark
+		 * that an error occured and return NULL.
+		 */
 		goto error;	
 	}
-	
+
 	return search_for_doc_retval(current_node, doc_list_begin, 
 								 doc_list_rec_begin);
 
@@ -265,7 +266,7 @@ error:
 		closedir_inf(dp);
 	
 	prev_error = 1;
-		
+	
 	return NULL;
 }
 
@@ -282,20 +283,9 @@ static struct stat *get_stat_dynamic(const char *path)
 }
 
 
-static void alloc_stat_struct()
+static void *alloc_stat_struct()
 {
 	return malloc_inf(sizeof(struct stat));
-}
-
-
-static int close_and_null_dp(DIR **dp)
-{
-	int retval;
-
-	retval = closedir_inf(*dp);
-	*dp = NULL;
-
-	return retval;
 }
 
 
@@ -339,12 +329,12 @@ static int adjust_doc_list_members(struct doc_list *current_node,
 
 static struct doc_list *save_doc(const char *doc_path, 
 								 const char *doc_name, 
-								 const struct *stat)
+								 const struct stat *stbuf)
 {
 	struct doc_list *node;
 
 	if ((node = alloc_doc_list()))
-		if (adjust_doc_list_members(node, doc_path, doc_name))
+		if (adjust_doc_list_members(node, doc_path, doc_name, stbuf))
 			free_and_null((void **) &node);
 
 	return node;
@@ -396,7 +386,7 @@ static void catch_readdir_inf_err()
 }
 
 
-void display_docs(const struct doc_list *ptr, bool color_status) 
+void display_docs_names(const struct doc_list *ptr, bool color_status) 
 {
 		if (color_status)
 			print_docs_colorful(ptr);
@@ -488,7 +478,7 @@ static int open_doc(char *const *argv)
 }
 
 
-int open_founded_doc_path(const struct users_configs *configs, const char *doc_path) 
+int open_doc_path(const struct users_configs *configs, const char *doc_path) 
 {
     const unsigned int argc = get_argc_val(configs->add_args);
     char *argv[argc+1];
@@ -497,7 +487,7 @@ int open_founded_doc_path(const struct users_configs *configs, const char *doc_p
 
 	/*
 	 * Reset errno to 0 since it'll be cruicial for the 
-	 * if statement
+	 * next if statement
 	 */
 	errno = 0;
 	
@@ -584,7 +574,7 @@ static void print_docs_num_no_color(const unsigned int num,
 
 /*
  * Sort the linked list of docs alphabetically.
- *
+ */
 int sort_docs_alpha(struct doc_list *unsorted_list) 
 {
 	const unsigned int obj_num = count_doc_list_nodes(unsorted_list);	
@@ -592,7 +582,7 @@ int sort_docs_alpha(struct doc_list *unsorted_list)
 	char *sorted_array[obj_num+1];
 	int retval;
 
-	save_doc_list_obj(unsorted_list, unsorted_array);
+	save_doc_list_names(unsorted_list, unsorted_array);
 	
 	if (!(retval = strsort_alpha(unsorted_array, sorted_array, obj_num)))
 		reorganize_doc_list_alpha(unsorted_list, sorted_array);
@@ -601,23 +591,23 @@ int sort_docs_alpha(struct doc_list *unsorted_list)
 }
 
 
-\*
- * Save every obj address in the linked list to the array of pointers.
- *
-static void save_doc_list_obj(const struct doc_list *ptr, char **array) 
+/*
+ * Save every name address in the linked list to the array of pointers.
+ */
+static void save_doc_list_names(const struct doc_list *ptr, char **array) 
 {
 	unsigned int i;
 
 	for (i=0; ptr; ptr=ptr->next)
-		array[i++] = ptr->obj;
+		array[i++] = ptr->name;
 	
 	array[i] = NULL;
 }
 
 
-\*
+/*
  * Reorganize the linked list's objects alphabetically.
- *
+ */
 static void reorganize_doc_list_alpha(struct doc_list *unsorted_list, 
 									  char **sorted_array) 
 {
@@ -625,21 +615,21 @@ static void reorganize_doc_list_alpha(struct doc_list *unsorted_list,
 	unsigned int i;
 
 	for (i=0; ptr; ptr=ptr->next)
-		ptr->obj = sorted_array[i++];
+		ptr->name = sorted_array[i++];
 }
 
 
 void reverse_doc_list(struct doc_list *ptr) {
-	const unsigned int obj_num = count_l_list_nodes(ptr);
+	const unsigned int obj_num = count_doc_list_nodes(ptr);
 	char *objs_array[obj_num+1];
 	long int i;
 
-	save_l_list_obj(ptr, objs_array);
+	save_doc_list_names(ptr, objs_array);
 	
 	for(i=obj_num-1; i>-1; ptr=ptr->next)
-		ptr->obj = objs_array[i--];
+		ptr->name = objs_array[i--];
 }
-*/
+
 
 /*
  * The same as search_for_doc() but with multiple documents directory support.
@@ -693,7 +683,7 @@ static void free_and_null_doc_list(struct doc_list **ptr)
 
 static void search_for_doc_multi_dir_err(struct doc_list **doc_list_begin) 
 {
-	if (doc_list_begin)
+	if (*doc_list_begin)
 		free_and_null_doc_list(doc_list_begin);
 }
 
@@ -732,19 +722,19 @@ static struct meas_unit ret_proper_size_format(float size_format,
 
 static float bytes_to_gb(off_t bytes) 
 {
-	return (float) bytes / 1000000000; 
+	return (float) bytes / 1000000000.0; 
 }
 
 
 static float bytes_to_mb(off_t bytes) 
 {
-	return (float) bytes / 1000000;
+	return (float) bytes / 1000000.0;
 }
 
 
 static float bytes_to_kb(off_t bytes) 
 { 
-	return (float) bytes / 1000;
+	return (float) bytes / 1000.0;
 }
 
 
@@ -801,21 +791,56 @@ static void print_doc_path_no_color(const char *doc_path)
 }
 
 
-int print_doc_details(const struct doc_list *list, bool color) 
+static int print_doc_details(const struct doc_list *list, bool color) 
 {
 	char *time_buf;
 
-	if(!(time_buf = get_last_mode_time()))
+	if(!(time_buf = get_last_mod_time(list->stbuf->st_mtime)))
 		return -1;
 
-	print_doc_path(list->doc_path, color);
+	print_doc_path(list->path, color);
 	print_doc_name(list->name, color);
 	print_last_mod_time(time_buf, color);
-	print_doc_modes(statbuf.st_mode, color);
-	print_doc_size(statbuf.st_size, color);
+	print_doc_modes(list->stbuf->st_mode, color);
+	print_doc_size(list->stbuf->st_size, color);
 	free(time_buf);
 
 	return 0;
+}
+
+
+int print_docs_details(const struct doc_list *list, bool color)
+{
+	int ret = 0;
+
+	for (;list && !ret; list=list->next)
+		if (!(ret = print_doc_details(list, color)))
+			separate_if_needed(list->next);
+
+	return ret;
+}
+
+
+/*
+ * Separate the details on each document if needed (if there's 
+ * another document after it).
+ */
+static void separate_if_needed(const struct doc_list *ptr) 
+{
+    /* const char separator[] = 
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "--\n"; 
+    */
+    
+    /* For now the separator will be a new line */
+    const char separator[] = "\n";
+
+    if (ptr)
+        printf("%s", separator);
 }
 
 
@@ -828,7 +853,7 @@ static void print_last_mod_time(const char *buffer, bool color)
 }
 
 
-static char *get_last_mode_time(const time_t timep)
+static char *get_last_mod_time(const time_t timep)
 {
 	/*
 	 * According to the Linux Man pages (man ctime(3), line 82) when using

@@ -35,16 +35,15 @@ static int invalid_arg_err(const int);
 static int generate_opt();
 static struct users_configs *get_configs();
 static int count_opt(const char *, bool, bool, bool);
-static void opts_cleanup(struct users_configs *, struct l_list *);
+static void opts_cleanup(struct users_configs *, struct doc_list *);
 static void big_docs_num_error();
-static int rearrange_if_needed(struct l_list *, bool, bool); 
+static int rearrange_if_needed(struct doc_list *, bool, bool); 
 static int list_opt(const char *, bool, bool, bool, bool, bool);
-static int numerous_opening(struct users_configs *, struct l_list *, bool, bool, bool, bool);
+static int numerous_opening(struct users_configs *, struct doc_list *, bool, bool, bool, bool);
 static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
-static int open_doc_list(struct users_configs *, const struct l_list *, bool, bool);
+static int open_doc_list(struct users_configs *, const struct doc_list *, bool, bool);
 static int details_opt(const char *, bool, bool, bool, bool, bool);
-static int print_doc_list_details(const char *, const struct l_list *, bool, bool);
-static void separate_if_needed(const struct l_list *);
+static void separate_if_needed(const struct doc_list *);
 static char *get_opt_arg(const char *);
 
 
@@ -95,40 +94,40 @@ static struct users_configs *get_configs() {
 static int count_opt(const char *str, bool ignore, 
                      bool rec, bool color) {
     struct users_configs *configs;
-    struct l_list *doc_list;
+    struct doc_list *list;
     int retval = -1;
 
     if((configs = get_configs())) {
-        doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec);
+        list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec);
         
         if(!prev_error) {
-            print_docs_num(doc_list, color);
+            print_docs_num(list, color);
             retval = 0;
         }  
 
-        opts_cleanup(configs, doc_list);
+        opts_cleanup(configs, list);
     }
 
     return retval;
 }
 
 
-static void opts_cleanup(struct users_configs *configs, struct l_list *doc_list) {
-    if(doc_list)
-        free_l_list(doc_list);
+static void opts_cleanup(struct users_configs *configs, struct doc_list *ptr) {
+    if(ptr)
+        free_doc_list(ptr);
 
     free_users_configs(configs);
 }
 
 
-static int rearrange_if_needed(struct l_list *doc_list, 
+static int rearrange_if_needed(struct doc_list *list, 
                                bool sort, bool reverse) {
     if(sort)
-        if(sort_docs_alpha(doc_list))
+        if(sort_docs_alpha(list))
             return -1;
     
     if(reverse)
-        reverse_l_list_obj(doc_list);
+        reverse_l_list_obj(list);
 
     return 0;
 }
@@ -137,15 +136,15 @@ static int rearrange_if_needed(struct l_list *doc_list,
 static int list_opt(const char *str, bool ignore, bool rec, 
                     bool color, bool sort, bool reverse) {
     struct users_configs *configs;
-    struct l_list *doc_list;
+    struct doc_list *list;
     int retval = -1;
     
     if((configs = get_configs())) {
-        if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if(!(retval = rearrange_if_needed(doc_list, sort, reverse)))
-                display_docs(doc_list, color);
+        if((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
+            if(!(retval = rearrange_if_needed(list, sort, reverse)))
+                display_docs(list, color);
         
-        opts_cleanup(configs, doc_list);
+        opts_cleanup(configs, list);
     }
 
     return retval;
@@ -155,11 +154,11 @@ static int list_opt(const char *str, bool ignore, bool rec,
 /*
  * This funtion is going to be used only when there's at least
  * one document in the doc_list.
- */
+ *
 static int open_doc_list(struct users_configs *configs, 
-                         const struct l_list *doc_list,
+                         const struct doc_list *list,
 			         	 bool rec, bool color) {
-	const struct l_list *ptr = doc_list;
+	const struct doc_list *ptr = list;
 	char *doc_path;
 	int retval = 0;
 
@@ -209,78 +208,30 @@ static void big_docs_num_error() {
 }
 
 
-static int numerous_opening(struct users_configs *configs, struct l_list *doc_list,
+static int numerous_opening(struct users_configs *configs, struct doc_list *list,
                             bool rec, bool color, bool sort, bool reverse) {
-    if(rearrange_if_needed(doc_list, sort, reverse))
+    if(rearrange_if_needed(list, sort, reverse))
         return -1;
     
-    return open_doc_list(configs, doc_list, rec, color);
-}
+    return open_doc_list(configs, list, rec, color);
+}*/
 
 
 static int details_opt(const char *str, bool ignore, bool rec, 
                        bool color, bool sort, bool reverse) {
     struct users_configs *configs;
-    struct l_list *doc_list;
+    struct doc_list *list;
     int retval = -1;
 
     if((configs = get_configs())) {
-        if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if(!rearrange_if_needed(doc_list, sort, reverse))
-                retval = print_doc_list_details(configs->docs_dir_path, doc_list, rec, color);
+        if((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
+            if(!rearrange_if_needed(list, sort, reverse))
+                retval = print_doc_list_details(configs->docs_dir_path, list, rec, color);
 
         opts_cleanup(configs, doc_list);
     }
     
     return retval;
-}
-
-
-/*
- * This funtion is going to be used only when there's at least
- * one document in the doc_list.
- */
-static int print_doc_list_details(const char *dirs_path, 
-                                  const struct l_list *doc_list, 
-                                  bool rec, bool color) {
-    const struct l_list *ptr = doc_list;
-    char *doc_path;
-    int retval = 0;
-
-    for(; ptr && !retval; ptr=ptr->next) {
-        if((doc_path = get_doc_path_multi_dir(dirs_path, ptr->obj, rec))) {
-            if(!(retval = print_doc_details(doc_path, color)))
-                separate_if_needed(ptr->next);
-
-            free(doc_path);
-        }
-        else
-            retval = -1;
-    }
-
-    return retval;
-}
-
-
-/*
- * Separate the details on each document if needed (if there's 
- * another document after it).
- */
-static void separate_if_needed(const struct l_list *ptr) {
-    /* const char separator[] = 
-        "-----------------------------"
-        "-----------------------------"
-        "-----------------------------"
-        "-----------------------------"
-        "-----------------------------"
-        "--\n"; 
-    */
-    
-    /* For now the separator will be a new line */
-    const char separator[] = "\n";
-
-    if(ptr)
-        printf("%s", separator);
 }
 
 

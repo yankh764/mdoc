@@ -20,14 +20,14 @@ struct doc_list {
 
 int sort_docs_alpha(struct doc_list *);
 void free_doc_list(struct doc_list *);
-void display_docs(const struct doc_list *, bool);
+void display_docs_names(const struct doc_list *, bool);
 unsigned int count_doc_list_nodes(const struct doc_list *);
 void reverse_doc_list(struct doc_list *);
 void print_docs_num(const struct doc_list *, bool);
 void display_help(const char *);
 struct doc_list *search_for_doc_multi_dir(const char *, const char *, bool, bool);
-int open_founded_doc_path(const struct users_configs *, const char *);
+int open_doc_path(const struct users_configs *, const char *);
 void print_opening_doc(const char *, bool);
-int print_doc_details(const struct doc_list *, bool);
+int print_docs_details(const struct doc_list *, bool);
 
 #endif
