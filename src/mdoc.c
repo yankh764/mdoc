@@ -98,6 +98,7 @@ static void *alloc_stat_struct();
 static struct stat *get_stat_dynamic(const char *);
 static int print_doc_details(const struct doc_list *, bool);
 static void separate_if_needed(const struct doc_list *);
+static struct doc_list *get_and_null_last_node(struct doc_list *);
 
 
 
@@ -619,15 +620,43 @@ static void reorganize_doc_list_alpha(struct doc_list *unsorted_list,
 }
 
 
-void reverse_doc_list(struct doc_list *ptr) {
-	const unsigned int obj_num = count_doc_list_nodes(ptr);
-	char *objs_array[obj_num+1];
-	long int i;
+struct doc_list *reverse_doc_list(struct doc_list *ptr) 
+{
+	struct doc_list *reversed_begin = NULL;
+	struct doc_list *current_node = NULL;
+	struct doc_list *next;
 
-	save_doc_list_names(ptr, objs_array);
-	
-	for(i=obj_num-1; i>-1; ptr=ptr->next)
-		ptr->name = objs_array[i--];
+	while ((next = get_and_null_last_node(ptr))) {
+		if (!reversed_begin) {
+			reversed_begin = next;
+			current_node = reversed_begin;
+		} else {
+			current_node->next = next;
+			current_node = current_node->next;
+		}
+	}
+	if (current_node)
+		current_node->next = ptr;
+
+	return reversed_begin;
+}
+
+/*
+ * Get the last node in ptr and null it so it won't
+ * be accessible from ptr any more.
+ */
+static struct doc_list *get_and_null_last_node(struct doc_list *ptr)
+{
+	struct doc_list *retval;
+
+	for (retval=NULL; ptr; ptr=ptr->next)
+		if (ptr->next && !ptr->next->next) {
+			retval = ptr->next;
+			ptr->next = NULL;
+		}
+		
+
+	return retval;
 }
 
 
