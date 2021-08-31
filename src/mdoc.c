@@ -45,12 +45,11 @@ struct meas_unit {
 static char *get_entry_path(const char *, const char *);
 static struct doc_list *get_last_node(const struct doc_list *);
 static char *prep_open_doc_argv(char **, const char *, const char *, const char *);
-static int adjust_doc_list_members(struct doc_list *, const char *, const char *, const struct stat *); 
+static void adjust_doc_list_members(struct doc_list *, const char *, const char *, const struct stat *); 
 static void print_docs_colorful(const struct doc_list *);
 static bool dot_entry(const char *); 
 static bool if_save_doc(const char *, const char *, bool);
 static void print_docs_no_color(const struct doc_list *);
-static void save_doc_list_names(const struct doc_list *, char **);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
 static void reorganize_doc_list_alpha(struct doc_list *, char **);
@@ -98,7 +97,7 @@ static void *alloc_stat_struct();
 static struct stat *get_stat_dynamic(const char *);
 static int print_doc_details(const struct doc_list *, bool);
 static void separate_if_needed(const struct doc_list *);
-static struct doc_list *get_and_null_last_node(struct doc_list *);
+static void save_doc_list_nodes(const struct doc_list *, struct doc_list **);
 
 
 
@@ -311,20 +310,19 @@ static int save_doc_to_proper_var(const char *doc_path, const char *doc_name,
 }
 
 
-static int adjust_doc_list_members(struct doc_list *current_node, 
-                                   const char *doc_path, const char *doc_name, 
-								   const struct stat *statbuf) 
+static void adjust_doc_list_members(struct doc_list *current_node, 
+                                    const char *doc_path, 
+									const char *doc_name, 
+								    const struct stat *statbuf) 
 {
 	current_node->path = (char *) doc_path;
-	
-	if (!(current_node->name = strcpy_dynamic(doc_name)))
-		return -1;
-	
+	current_node->name = (char *) doc_name;
 	current_node->stbuf = (void *) statbuf;
-	/* Mark the next node as empty in case the current one is the last one */
+	/* 
+	 * Mark the next node as empty in case 
+	 * the current one is the last one 
+	 */
 	current_node->next = NULL;
-
-	return 0;
 }
 
 
@@ -333,10 +331,14 @@ static struct doc_list *save_doc(const char *doc_path,
 								 const struct stat *stbuf)
 {
 	struct doc_list *node;
+	char *doc_name_cp;
 
-	if ((node = alloc_doc_list()))
-		if (adjust_doc_list_members(node, doc_path, doc_name, stbuf))
+	if ((node = alloc_doc_list())) {
+		if((doc_name_cp = strcpy_dynamic(doc_name)))
+			adjust_doc_list_members(node, doc_path, doc_name_cp, stbuf);
+		else
 			free_and_null((void **) &node);
+	}
 
 	return node;
 }
@@ -583,26 +585,12 @@ int sort_docs_alpha(struct doc_list *unsorted_list)
 	char *sorted_array[obj_num+1];
 	int retval;
 
-	save_doc_list_names(unsorted_list, unsorted_array);
+//	save_doc_list_names(unsorted_list, unsorted_array);
 	
 	if (!(retval = strsort_alpha(unsorted_array, sorted_array, obj_num)))
 		reorganize_doc_list_alpha(unsorted_list, sorted_array);
 	
 	return retval;
-}
-
-
-/*
- * Save every name address in the linked list to the array of pointers.
- */
-static void save_doc_list_names(const struct doc_list *ptr, char **array) 
-{
-	unsigned int i;
-
-	for (i=0; ptr; ptr=ptr->next)
-		array[i++] = ptr->name;
-	
-	array[i] = NULL;
 }
 
 
@@ -622,41 +610,34 @@ static void reorganize_doc_list_alpha(struct doc_list *unsorted_list,
 
 struct doc_list *reverse_doc_list(struct doc_list *ptr) 
 {
-	struct doc_list *reversed_begin = NULL;
-	struct doc_list *current_node = NULL;
-	struct doc_list *next;
+	const unsigned int nodes_num = count_doc_list_nodes(ptr);
+	struct doc_list *nodes_array[nodes_num+1];
+	struct doc_list *reversed = NULL;
+	struct doc_list *current_node;
+	long int i;
 
-	while ((next = get_and_null_last_node(ptr))) {
-		if (!reversed_begin) {
-			reversed_begin = next;
-			current_node = reversed_begin;
-		} else {
-			current_node->next = next;
-			current_node = current_node->next;
-		}
+	save_doc_list_nodes(ptr, nodes_array);
+	
+	for (i=nodes_num-1; i>-1; i--) {
+		if (!reversed)
+			current_node = reversed = nodes_array[i];
+		else 
+			current_node = current_node->next = nodes_array[i];
+		/* In case this node is the last one */
+		current_node->next = NULL;
 	}
-	if (current_node)
-		current_node->next = ptr;
 
-	return reversed_begin;
+	return reversed;
 }
 
-/*
- * Get the last node in ptr and null it so it won't
- * be accessible from ptr any more.
- */
-static struct doc_list *get_and_null_last_node(struct doc_list *ptr)
+
+static void save_doc_list_nodes(const struct doc_list *ptr, 
+								struct doc_list **nodes_array)
 {
-	struct doc_list *retval;
+	unsigned int i;
 
-	for (retval=NULL; ptr; ptr=ptr->next)
-		if (ptr->next && !ptr->next->next) {
-			retval = ptr->next;
-			ptr->next = NULL;
-		}
-		
-
-	return retval;
+	for (i=0; ptr; ptr=ptr->next)
+		nodes_array[i++] = (void *) ptr;
 }
 
 
