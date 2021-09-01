@@ -18,7 +18,7 @@ struct doc_list {
 };
 
 
-int sort_docs_alpha(struct doc_list *);
+int sort_docs_names_alpha(struct doc_list *);
 void free_doc_list(struct doc_list *);
 void display_docs_names(const struct doc_list *, bool);
 unsigned int count_doc_list_nodes(const struct doc_list *);

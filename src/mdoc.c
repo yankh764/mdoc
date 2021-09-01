@@ -575,22 +575,41 @@ static void print_docs_num_no_color(const unsigned int num,
 }
 
 
-/*
- * Sort the linked list of docs alphabetically.
- */
-int sort_docs_alpha(struct doc_list *unsorted_list) 
+int sort_docs_names_alpha(struct doc_list *ptr) 
 {
-	const unsigned int obj_num = count_doc_list_nodes(unsorted_list);	
-	char *unsorted_array[obj_num+1];
-	char *sorted_array[obj_num+1];
+	const unsigned int nodes_num = count_doc_list_nodes(ptr);
+	struct doc_list *unsorted_array[nodes_num+1];
+	struct doc_list *sorted_array[nodes_num+1];
 	int retval;
 
-//	save_doc_list_names(unsorted_list, unsorted_array);
-	
-	if (!(retval = strsort_alpha(unsorted_array, sorted_array, obj_num)))
-		reorganize_doc_list_alpha(unsorted_list, sorted_array);
+	save_doc_list_nodes(ptr, unsorted_array);
+
+	//if (!(retval = strsort_alpha(unsorted_array, sorted_array, obj_num)))
+	//	reorganize_doc_list_alpha(unsorted_list, sorted_array);
 	
 	return retval;
+}
+
+
+static int sort_doc_list(struct doc_list **unsorted_array, 
+						 struct doc_list **sorted_array, 
+						 unsigned int nodes_num)
+{
+	unsigned int i;
+	long int ret;
+
+	for (i=0; i<nodes_num; i++) {
+//		ret = get_smallest_doc_name_i(unsorted_array);
+		
+		sorted_array[i] = unsorted_array[ret];
+		unsorted_array[ret] = NULL;
+	}
+}
+
+
+static unsigned int get_smallest_doc_name_i(struct doc_list **array)
+{
+	
 }
 
 
@@ -638,6 +657,8 @@ static void save_doc_list_nodes(const struct doc_list *ptr,
 
 	for (i=0; ptr; ptr=ptr->next)
 		nodes_array[i++] = (void *) ptr;
+	
+	nodes_array[i] = NULL;
 }
 
 

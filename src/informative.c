@@ -20,10 +20,11 @@
 #include "informative.h"
 
 
-void *malloc_inf(size_t size) {
+void *malloc_inf(size_t size) 
+{
 	void *ptr;
 
-	if(!(ptr = malloc(size)))
+	if (!(ptr = malloc(size)))
 		fprintf(stderr, "%s: can't allocate memory: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -31,20 +32,22 @@ void *malloc_inf(size_t size) {
 }
 
 
-char *fgets_inf(char *str, int size, FILE *stream) {
+char *fgets_inf(char *str, int size, FILE *stream) 
+{
 	char *retval;
 
-	if(!(retval = fgets(str, size, stream)))
+	if (!(retval = fgets(str, size, stream)))
 		fprintf(stderr, "%s: can't read input\n", prog_name_inf);
 
 	return retval;
 }
 
 
-FILE *fopen_inf(const char *pathname, const char *mode) {
+FILE *fopen_inf(const char *pathname, const char *mode) 
+{
 	FILE *fp;
 
-	if(!(fp = fopen(pathname, mode)))
+	if (!(fp = fopen(pathname, mode)))
 		fprintf(stderr, "%s: can't open '%s': %s\n", 
 				prog_name_inf, pathname, strerror(errno));
 	
@@ -52,10 +55,11 @@ FILE *fopen_inf(const char *pathname, const char *mode) {
 }
 
 
-int fclose_inf(FILE *fp) {
+int fclose_inf(FILE *fp) 
+{
 	int retval;
 
-	if((retval = fclose(fp)))
+	if ((retval = fclose(fp)))
 		fprintf(stderr, "%s: can't close file: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -63,10 +67,11 @@ int fclose_inf(FILE *fp) {
 }
 
 
-DIR *opendir_inf(const char *path) {
+DIR *opendir_inf(const char *path) 
+{
 	DIR *dp;
 
-	if(!(dp = opendir(path)))
+	if (!(dp = opendir(path)))
 		fprintf(stderr, "%s: can't open '%s': %s\n", 
 				prog_name_inf, path, strerror(errno));
 
@@ -74,10 +79,11 @@ DIR *opendir_inf(const char *path) {
 }
 
 
-int closedir_inf(DIR *dp) {
+int closedir_inf(DIR *dp) 
+{
 	int retval;
 
-	if((retval = closedir(dp)))
+	if ((retval = closedir(dp)))
 		fprintf(stderr, "%s: can't close directory: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -85,10 +91,11 @@ int closedir_inf(DIR *dp) {
 }
 
 
-int stat_inf(const char *pathname, struct stat *statbuf) {
+int stat_inf(const char *pathname, struct stat *statbuf) 
+{
 	int retval;
 
-	if((retval = stat(pathname, statbuf)))
+	if ((retval = stat(pathname, statbuf)))
 		fprintf(stderr, "%s: can't get info on '%s': %s\n", 
 				prog_name_inf, pathname, strerror(errno));
 
@@ -96,10 +103,11 @@ int stat_inf(const char *pathname, struct stat *statbuf) {
 }
 
 
-struct dirent *readdir_inf(DIR *dp) {
+struct dirent *readdir_inf(DIR *dp) 
+{
 	struct dirent *entry;
 
-	if(!(entry = readdir(dp)) && errno)
+	if (!(entry = readdir(dp)) && errno)
 		fprintf(stderr, "%s: can't read file's entry: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -107,10 +115,11 @@ struct dirent *readdir_inf(DIR *dp) {
 }
 
 
-pid_t fork_inf(void) {
+pid_t fork_inf(void) 
+{
 	pid_t retval;
 	
-	if((retval = fork()) == -1)
+	if ((retval = fork()) == -1)
 		fprintf(stderr, "%s: can't fork new child process: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -118,10 +127,11 @@ pid_t fork_inf(void) {
 }
 
 
-pid_t waitpid_inf(pid_t pid, int *wstatus, int options) {
+pid_t waitpid_inf(pid_t pid, int *wstatus, int options) 
+{
 	pid_t retval; 
 
-	if((retval = waitpid(pid, wstatus, options)) == -1)
+	if ((retval = waitpid(pid, wstatus, options)) == -1)
 		fprintf(stderr, "%s: can't wait for state in the new child process: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -129,10 +139,11 @@ pid_t waitpid_inf(pid_t pid, int *wstatus, int options) {
 }
 
 
-int execv_inf(const char *pathname, char *const *argv) {
+int execv_inf(const char *pathname, char *const *argv) 
+{
 	int retval = 0;
 
-	if((retval = execv(pathname, argv)) == -1)
+	if ((retval = execv(pathname, argv)) == -1)
 		fprintf(stderr, "%s: can't execute '%s': %s\n", 
 				prog_name_inf, pathname, strerror(errno));
 
@@ -140,10 +151,11 @@ int execv_inf(const char *pathname, char *const *argv) {
 }
 
 
-void *realloc_inf(void *ptr, size_t size) {
+void *realloc_inf(void *ptr, size_t size) 
+{
 	void *retval;
 
-	if(!(retval = realloc(ptr, size)))
+	if (!(retval = realloc(ptr, size)))
 		fprintf(stderr, "%s: can't allocate memory: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -151,10 +163,11 @@ void *realloc_inf(void *ptr, size_t size) {
 }
 
 
-int execvp_inf(const char *file, char *const *argv) {
+int execvp_inf(const char *file, char *const *argv) 
+{
 	int retval = 0;
 
-	if((retval = execvp(file, argv)) == -1)
+	if ((retval = execvp(file, argv)) == -1)
 		fprintf(stderr, "%s: can't execute '%s': %s\n", 
 				prog_name_inf, file, strerror(errno));
 
@@ -162,10 +175,11 @@ int execvp_inf(const char *file, char *const *argv) {
 }
 
 
-void *reallocarray_inf(void *ptr, size_t nmemb, size_t size) {
+void *reallocarray_inf(void *ptr, size_t nmemb, size_t size) 
+{
 	void *retval;
 
-	if(!(retval = reallocarray(ptr, nmemb, size)))
+	if (!(retval = reallocarray(ptr, nmemb, size)))
 		fprintf(stderr, "%s: can't allocate memory: %s\n", 
 				prog_name_inf, strerror(errno));
 
@@ -173,10 +187,11 @@ void *reallocarray_inf(void *ptr, size_t nmemb, size_t size) {
 }
 
 
-char *getenv_inf(const char *name) {
+char *getenv_inf(const char *name) 
+{
 	char *retval;
 
-	if(!(retval = getenv(name)))
+	if (!(retval = getenv(name)))
 		fprintf(stderr, "%s: couldn't find '%s' environment variable\n", 
 				prog_name_inf, name);
 
@@ -184,10 +199,11 @@ char *getenv_inf(const char *name) {
 }
 
 
-char *ctime_r_inf(const time_t *timep, char *buf) {
+char *ctime_r_inf(const time_t *timep, char *buf) 
+{
 	char *retval;
 
-	if(!(retval = ctime_r(timep, buf)))
+	if (!(retval = ctime_r(timep, buf)))
 		fprintf(stderr, "%s: couldn't convert time: %s\n", 
 				prog_name_inf, strerror(errno));
 

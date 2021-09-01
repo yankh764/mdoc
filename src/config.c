@@ -28,32 +28,43 @@ static void free_and_null_users_configs(struct users_configs **);
 static struct users_configs * read_config_file(FILE *);
 
 
-static char *get_line_inf(FILE *stream) {
+static char *get_line_inf(FILE *stream) 
+{
 	char *retval;
 
-	if(!(retval = get_line(stream)))
+	if (!(retval = get_line(stream)))
 		fprintf(stderr, "%s: an necessary input is missing\n", prog_name_inf);
 
 	return retval;
 }
 
 
-static char *input_docs_dir_path() {
+static char *input_docs_dir_path() 
+{
 	printf("Please enter your documents directories absolute path: ");
 
 	return get_line_inf(stdin);
 }
 
 
-static char *input_pdf_viewer_name() {
+static char *input_pdf_viewer_name() 
+{
 	printf("\nPlease enter your documents viewer's name: ");
 
 	return get_line_inf(stdin);
 }
 
 
-static char *input_add_args() {
+static char *input_add_args() 
+{
 	printf("\nPlease enter additional arguments for your pdf viewer (optional): ");
+	/* 
+	 * Reset errno to 0 to be sure 
+	 * that printf() didn't change it 
+	 * since it's critical to distinguish 
+	 * an error from an empty input.
+	 */
+	errno = 0;
 	
 	return get_line(stdin);
 }
@@ -65,26 +76,20 @@ static char *input_add_args() {
  * and the third is for additional arguments. Then it'll take the user's 
  * answers as an input.
  */
-static struct users_configs *input_configs() { 
+static struct users_configs *input_configs() 
+{ 
     struct users_configs *input;
 
-	if((input = alloc_users_configs())) {
+	if ((input = alloc_users_configs())) {
 		null_users_configs(input);
-		/* 
-		 * Reset errno to 0 to be sure 
-		 * that printf() didn't change it 
-		 * since it's critical for the if()
-		 * statement on line 87.
-		 */
-		errno = 0;
 		/*
 		 * Get all the necessary input from the user.
 		 * Note: inputting add_args is optional, so the program
 		 * will fail only if it's missing due to an error.
 		 */
-		if(!(input->docs_dir_path = input_docs_dir_path()) ||
-		   !(input->pdf_viewer = input_pdf_viewer_name())  ||
-		   (!(input->add_args = input_add_args())          && 
+		if (!(input->docs_dir_path = input_docs_dir_path()) ||
+			!(input->pdf_viewer = input_pdf_viewer_name())  ||
+			(!(input->add_args = input_add_args())          && 
 		      errno))
 			/* Failure */
 			 free_and_null_users_configs(&input);
@@ -94,7 +99,8 @@ static struct users_configs *input_configs() {
 }
 
 
-static void free_and_null_users_configs(struct users_configs **ptr) {
+static void free_and_null_users_configs(struct users_configs **ptr) 
+{
 	free_users_configs(*ptr);
 	*ptr = NULL;
 }
@@ -110,20 +116,21 @@ static void *alloc_users_configs()
  * The function will generate the configurations according to the 
  * user's answers.
  */
-int generate_config(const char *abs_config_path) {
+int generate_config(const char *abs_config_path) 
+{
 	struct users_configs *configs;
 	int retval = -1;
 	FILE *fp;
 
-	if((fp = fopen_inf(abs_config_path, "w"))) {
-		if((configs = input_configs())) {
+	if ((fp = fopen_inf(abs_config_path, "w"))) {
+		if ((configs = input_configs())) {
 			write_configs(fp, configs);			
 			free_users_configs(configs); 
 			
 			retval = 0;
 		}
 		
-		if(fclose_inf(fp))
+		if (fclose_inf(fp))
 			retval = -1;
 	}	
 
@@ -131,24 +138,26 @@ int generate_config(const char *abs_config_path) {
 }
 
 
-static void write_configs(FILE *fp, const struct users_configs *configs) {
+static void write_configs(FILE *fp, const struct users_configs *configs) 
+{
 	fprintf(fp, "%s\n%s\n", configs->docs_dir_path, configs->pdf_viewer);
 	
-	if(configs->add_args)
+	if (configs->add_args)
 		fprintf(fp, "%s\n", configs->add_args);
 	
 	printf("\nYour configurations were generated succesfully.\n");
 }
 
 
-struct users_configs *read_configs(const char *abs_config_path) {
+struct users_configs *read_configs(const char *abs_config_path) 
+{
 	struct users_configs *configs = NULL;
 	FILE *fp;
 	
-	if((fp = fopen_inf(abs_config_path, "r"))) {
+	if ((fp = fopen_inf(abs_config_path, "r"))) {
 		configs = read_config_file(fp);
 
-		if(fclose_inf(fp) && configs)
+		if (fclose_inf(fp) && configs)
 			free_and_null_users_configs(&configs);
 	}
 
@@ -161,13 +170,6 @@ static struct users_configs * read_config_file(FILE *fp) {
 	
 	if((configs = alloc_users_configs())) {
 		null_users_configs(configs);
-		/* 
-		 * Reset errno to 0 to be sure 
-		 * that printf() didn't change it 
-		 * since it's critical for the if()
-		 * statement on line 178.
-		 */
-		errno = 0;
 		/*
 		 * Get all the necessary config sections from the file.
 		 * Note: reading add_args is optional, so the program

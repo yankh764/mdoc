@@ -14,14 +14,14 @@
 
 
 /* Static Functions Prototype */
-static bool end_of_input(int);
+static bool end_of_input(const int);
 
 
 /*
  * Return true if the passed char indicates the
  * end of the input (if the char is '\n' or EOF).
  */
-static bool end_of_input(int c) 
+static bool end_of_input(const int c) 
 {
 	return (c == '\n' || c == EOF);
 }
@@ -30,36 +30,38 @@ static bool end_of_input(int c)
 /*
  * Get a line of input from stream without limiting it's size.
  */
-char *get_line(FILE *stream) {
+char *get_line(FILE *stream) 
+{
 	char *line_address = NULL;
 	char *line = NULL;
 	unsigned int i;
 	int c;
 
-	for(i=0; (c = getc(stream)); i++) {
-		if(end_of_input(c))
+	for (i=0; (c = getc(stream)); i++) {
+		if (end_of_input(c))
 			break;
 		
-		if(!(line = realloc_inf(line, sizeof(char) * (i+1))))
-			break;
-		
+		if (!(line = realloc_inf(line, sizeof(char) * (i+1))))
+			goto error;
+
 		line[i] = c;
-		/* Save the address of line in case realloc_inf() overwrote it with NULL, 
-		   so cleanup can be done.                                               */
+		/* 
+		 * Save the address of line in case realloc_inf() overwrote it 
+		 * with NULL, so cleanup can be done.                                               
+		 */
 		line_address = line;
 	}	
+	if (line)
+		if (!(line = realloc_inf(line, sizeof(char) * (i+1))))	
+			goto error;
 
-	if(line) 
-		if((line = realloc_inf(line, sizeof(char) * (i+1))))	
-			line[i] = '\0';	
-	/* 
-	 * If line_address != NULL whereas line = NULL this means
-	 * that there was memory allocated by realloc_inf() but it also
-	 * failed in the last call and returned NULL to line.
-	 */
-	if(line_address && !line)
-		free(line_address);
+	line[i] = '\0';	
 
 	return line;
-}
 
+error:
+	if (line_address)
+		free(line_address);
+
+	return NULL;
+}

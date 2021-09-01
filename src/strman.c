@@ -15,24 +15,17 @@
 
 
 /* Static Functions Prototype */
-static void two_chars_cleanup(char *, char *);
-static long int get_smallest_word_i(char **, const unsigned int);
-static bool alpha_cmp(const char *, const char *);
-static void free_and_null(void **);
-static void adjust_val_after_alpha_cmp(char **, char **, long int *, unsigned int);
 static void convert_to_lower(char *);
-static char *small_let_copy(const char *);
-
 
 
 /*
  * Make a small letters copy of str.
  */
-static char *small_let_copy(const char *str) 
+char *small_let_copy(const char *str) 
 {
 	const size_t len = strlen(str) + 1;
 	char *str_small; 
-	unsigned int i;
+	size_t i;
 
 	if ((str_small = malloc_inf(sizeof(char) * len))) {
 		for (i=0; str[i]!='\0'; i++) {
@@ -80,134 +73,36 @@ bool strstr_i(const char *haystack, const char *needle)
 }
 
 
-static void two_chars_cleanup(char *ptr1, char *ptr2) {
-	if(ptr1)
-		free(ptr1);
-	if(ptr2)
-		free(ptr2);
-}
-
-
-/* 
- * Sort the array of pointers alphabetically and save it to sorted.
- */
-int strsort_alpha(char **unsorted, char **sorted, 
-                  const unsigned int size) 
-{
-	unsigned int i;
-	long int ret_i;
-
-	for(i=0; i<size; i++) {
-		if((ret_i = get_smallest_word_i(unsorted, size)) == -1)
-			return -1;
-		
-		sorted[i] = unsorted[ret_i];
-		unsorted[ret_i] = NULL;
-	}
-	sorted[i] = NULL;
-	
-	return 0;
-}
-	
-
-/* 
- * Return the index of the word that has letters with a 
- * lowest value in the array of pointers. 
- */
-static long int get_smallest_word_i(char **array, const unsigned int size) {
-	char *smallest_word = NULL;
-	char *current_word = NULL;
-	long int smallest_word_i; 
-	unsigned int i;
-	bool error = 0;
-
-	for(i=0, smallest_word_i=0; i<size; i++) {
-		if(array[i] == NULL)
-			continue;
-		
-		if(smallest_word) {
-			if(!(current_word = small_let_copy(array[i]))) {
-				error = 1;
-				break;
-			}
-			
-			/* If current_word needs to come before smallest_word */
-			if(alpha_cmp(smallest_word, current_word))
-				adjust_val_after_alpha_cmp(&smallest_word, &current_word, &smallest_word_i, i);
-			
-			else 
-				free_and_null((void **) &current_word);
-		}
-		else {
-			if(!(smallest_word = small_let_copy(array[i]))) {
-				error = 1;
-				break;
-			}
-			
-			smallest_word_i = i;
-		}
-	}
-	if(error)
-		smallest_word_i = -1;
-
-	two_chars_cleanup(smallest_word, current_word);
-	
-	return smallest_word_i;
-}
-
-
-/*
- * Adjust the passed variables values from get_smallest_word_i()
- * to the right values if alpha_cmp() returns 1.
- */
-static void adjust_val_after_alpha_cmp(char **smallest_word, 
-                                       char **current_word, 
-                                       long int *smallest_word_i, 
-									   unsigned int current_word_i) {
-	free(*smallest_word);
-	*smallest_word = *current_word;
-	*smallest_word_i = current_word_i;
-	*current_word = NULL;
-} 
-
-
-static void free_and_null(void **ptr) {
-	free(*ptr);
-	*ptr = NULL;
-}
-
-
 /*
  * Return 1 if word_to_check should come before assumed_smaller
  * alphabetically, otherwise return 0.
  */
-static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
+bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) 
+{
 	const size_t assumed_len = strlen(assumed_smaller);
 	const size_t check_len = strlen(word_to_check);
 	size_t min_len, i;
 
 	min_len = (assumed_len < check_len) ? assumed_len : check_len; 
 	
-	for(i=0; i<min_len; i++) {
+	for (i=0; i<min_len; i++) {
 	/* If both chars are alphabetical characters check 
 	   their values.                                   */
-		if(isalpha(word_to_check[i])
+		if (isalpha(word_to_check[i])
 		 && isalpha(assumed_smaller[i])) {
-			if(word_to_check[i] < assumed_smaller[i])
+			if (word_to_check[i] < assumed_smaller[i])
 				return 1;
-
-			else if(assumed_smaller[i] < word_to_check[i])
+			else if (assumed_smaller[i] < word_to_check[i])
 				return 0;
-		}
 		/* If assumed_smaller[i] isn't alphabetical char whereas word_to_check[i] is */
-		else if(!isalpha(assumed_smaller[i])
-		 && isalpha(word_to_check[i]))
+		} else if (!isalpha(assumed_smaller[i]) 
+				&& isalpha(word_to_check[i])) {
 			return 1;
-
 		/* If word_to_check[i] isn't alphabetical char whereas assumed_smaller[i] is */
-		else if(!isalpha(word_to_check[i])
-		 && isalpha(assumed_smaller[i]))
+		} else if (!isalpha(word_to_check[i]) 
+				&& isalpha(assumed_smaller[i])) {
 			return 0;
+		}
 	}
 	
 	/* If haven't returned yet, return 1 if  
@@ -216,13 +111,14 @@ static bool alpha_cmp(const char *assumed_smaller, const char *word_to_check) {
 }
 
 
-unsigned int count_words(const char *line) {
+unsigned int count_words(const char *line) 
+{
 	unsigned int words;
 	unsigned int i;
 	bool inside = 0;
 
-	for(i=0, words=0; line[i]!='\0'; i++) {
-		if(isspace(line[i]))
+	for (i=0, words=0; line[i]!='\0'; i++) {
+		if (isspace(line[i]))
 			inside = 0;
 		else {
  			if(!inside) 
@@ -240,11 +136,12 @@ unsigned int count_words(const char *line) {
  * Replace each space (white character) with a null byte 
  * and return the index of the next char.
  */
-unsigned int space_to_null(char *text) {
+unsigned int space_to_null(char *text) 
+{
 	unsigned int i;
 
-	for(i=0; text[i]!='\0'; i++)
-		if(isspace(text[i])) {
+	for (i=0; text[i]!='\0'; i++)
+		if (isspace(text[i])) {
 			text[i++] = '\0';
 			break;
 		}
@@ -253,11 +150,12 @@ unsigned int space_to_null(char *text) {
 }
 
 
-char *strcpy_dynamic(const char *src) {
+char *strcpy_dynamic(const char *src) 
+{
 	const size_t len = strlen(src) + 1;
 	char *src_cpy;
 
-	if((src_cpy = malloc_inf(sizeof(char) * len)))
+	if ((src_cpy = malloc_inf(sizeof(char) * len)))
 		/*
 		 * I decided to use memcpy() instead of strncpy()
 		 * just because I like it's behaviour more.
