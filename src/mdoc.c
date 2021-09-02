@@ -52,7 +52,7 @@ static bool if_save_doc(const char *, const char *, bool);
 static void print_docs_no_color(const struct doc_list *);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
-static void reorganize_doc_list_alpha(struct doc_list *, char **);
+static struct doc_list *reorganize_doc_list_alpha(struct doc_list *, struct doc_list **);
 static void *alloc_doc_list();
 static int open_doc(char *const *);
 static unsigned int prep_add_args(char **, char *, unsigned int);
@@ -98,6 +98,9 @@ static struct stat *get_stat_dynamic(const char *);
 static int print_doc_details(const struct doc_list *, bool);
 static void separate_if_needed(const struct doc_list *);
 static void save_doc_list_nodes(const struct doc_list *, struct doc_list **);
+static int sort_doc_list(struct doc_list **, struct doc_list **, unsigned int);
+static long int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
+static void adjust_smallest_val(char **, char **, unsigned int *, unsigned int);
 
 
 
@@ -575,17 +578,17 @@ static void print_docs_num_no_color(const unsigned int num,
 }
 
 
-int sort_docs_names_alpha(struct doc_list *ptr) 
+struct doc_list *sort_docs_names_alpha(struct doc_list *ptr) 
 {
 	const unsigned int nodes_num = count_doc_list_nodes(ptr);
-	struct doc_list *unsorted_array[nodes_num+1];
-	struct doc_list *sorted_array[nodes_num+1];
-	int retval;
+	struct doc_list *unsorted_array[nodes_num];
+	struct doc_list *sorted_array[nodes_num];
+	struct doc_list *retval = NULL;
 
 	save_doc_list_nodes(ptr, unsorted_array);
 
-	//if (!(retval = strsort_alpha(unsorted_array, sorted_array, obj_num)))
-	//	reorganize_doc_list_alpha(unsorted_list, sorted_array);
+	if (!sort_doc_list(unsorted_array, sorted_array, nodes_num))
+		retval = reorganize_doc_list_alpha(ptr, sorted_array);
 	
 	return retval;
 }
@@ -599,38 +602,92 @@ static int sort_doc_list(struct doc_list **unsorted_array,
 	long int ret;
 
 	for (i=0; i<nodes_num; i++) {
-//		ret = get_smallest_doc_name_i(unsorted_array);
-		
+		if ((ret = get_smallest_doc_name_i(unsorted_array, nodes_num)) == -1)
+			return -1;
+
 		sorted_array[i] = unsorted_array[ret];
 		unsorted_array[ret] = NULL;
 	}
+
+	return 0;
 }
 
 
-static unsigned int get_smallest_doc_name_i(struct doc_list **array)
+static long int get_smallest_doc_name_i(struct doc_list **array, 
+										const unsigned int nodes_num)
 {
+	unsigned int i, smallest_i;
+	char *smallest = NULL;
+	char *current;
 	
+	for (i=0, smallest_i=0; i<nodes_num; i++) {
+		if (!array[i])
+			continue;
+
+		if (smallest) {
+			if (!(current = small_let_copy(array[i]->name)))
+				goto free_smallest;
+			/* If current word needs to come before smallest word */
+			if(alpha_cmp(smallest, current))
+				adjust_smallest_val(&smallest, &current, &smallest_i, i);
+			else
+				free(current);
+		} else {
+			if (!(smallest = small_let_copy(array[i]->name)))
+				goto error;
+
+			smallest_i = i;
+		}
+	}
+	if (smallest)
+		free(smallest);
+
+	return smallest_i;
+
+free_smallest:
+	if (smallest)
+		free(smallest);
+error:
+	return -1;
+}
+
+
+static void adjust_smallest_val(char **smallest, char **current, 
+								unsigned int *smallest_i, unsigned int current_i)
+{
+	free(*smallest);
+	*smallest = *current;
+	*smallest_i = current_i;
 }
 
 
 /*
  * Reorganize the linked list's objects alphabetically.
  */
-static void reorganize_doc_list_alpha(struct doc_list *unsorted_list, 
-									  char **sorted_array) 
+static struct doc_list *reorganize_doc_list_alpha(struct doc_list *ptr, 
+												  struct doc_list **sorted_array) 
 {
-	struct doc_list *ptr = unsorted_list;
+	struct doc_list *sorted = NULL;
+	struct doc_list *current_node;
 	unsigned int i;
 
-	for (i=0; ptr; ptr=ptr->next)
-		ptr->name = sorted_array[i++];
+	for (i=0; ptr; ptr=ptr->next) {
+		if (!sorted)
+			current_node = sorted = sorted_array[i++];
+		else
+			current_node = current_node->next = sorted_array[i++];
+		/* In case this node is the last one */
+		current_node->next = NULL;
+	}
+
+	return sorted;
 }
 
 
 struct doc_list *reverse_doc_list(struct doc_list *ptr) 
 {
 	const unsigned int nodes_num = count_doc_list_nodes(ptr);
-	struct doc_list *nodes_array[nodes_num+1];
+	struct doc_list *nodes_array[nodes_num];
 	struct doc_list *reversed = NULL;
 	struct doc_list *current_node;
 	long int i;
@@ -657,8 +714,6 @@ static void save_doc_list_nodes(const struct doc_list *ptr,
 
 	for (i=0; ptr; ptr=ptr->next)
 		nodes_array[i++] = (void *) ptr;
-	
-	nodes_array[i] = NULL;
 }
 
 
