@@ -37,27 +37,27 @@ static struct users_configs *get_configs();
 static int count_opt(const char *, bool, bool, bool);
 static void opts_cleanup(struct users_configs *, struct doc_list *);
 static void big_docs_num_error();
-static int rearrange_if_needed(struct doc_list *, bool, bool); 
+static struct doc_list *rearrange_if_needed(struct doc_list *, bool, bool); 
 static int list_opt(const char *, bool, bool, bool, bool, bool);
-static int numerous_opening(struct users_configs *, struct doc_list *, bool, bool, bool, bool);
+static int numerous_opening(struct users_configs *, struct doc_list *, bool, bool, bool);
 static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
-static int open_doc_list(struct users_configs *, const struct doc_list *, bool, bool);
+static int open_doc_list(struct users_configs *, const struct doc_list *, bool);
 static int details_opt(const char *, bool, bool, bool, bool, bool);
-static void separate_if_needed(const struct doc_list *);
 static char *get_opt_arg(const char *);
 
 
 
-static char *get_config_path() {
+static char *get_config_path() 
+{
     const char config[] = ".config/mdoc";
     char *config_path = NULL;
     char *home; 
     size_t len;
 
-    if((home = getenv_inf("HOME"))) {
+    if ((home = getenv_inf("HOME"))) {
         len = strlen(config) + strlen(home) + 2;
         
-        if((config_path = malloc_inf(sizeof(char) * len)))
+        if ((config_path = malloc_inf(sizeof(char) * len)))
             snprintf(config_path, len, "%s/%s", home, config);
     }
 
@@ -65,11 +65,12 @@ static char *get_config_path() {
 }
 
 
-static int generate_opt() {
+static int generate_opt() 
+{
     char *config_path; 
     int retval = -1;
 
-    if((config_path = get_config_path())) {
+    if ((config_path = get_config_path())) {
         retval = generate_config(config_path);
         free(config_path);
     }
@@ -78,11 +79,12 @@ static int generate_opt() {
 }
 
 
-static struct users_configs *get_configs() {
+static struct users_configs *get_configs() 
+{
     struct users_configs *configs = NULL;
     char *config_path;
 
-    if((config_path = get_config_path())) {
+    if ((config_path = get_config_path())) {
         configs = read_configs(config_path);
         free(config_path);
     }
@@ -91,20 +93,19 @@ static struct users_configs *get_configs() {
 }
 
 
-static int count_opt(const char *str, bool ignore, 
-                     bool rec, bool color) {
+static int count_opt(const char *str, bool ignore, bool rec, bool color) 
+{
     struct users_configs *configs;
     struct doc_list *list;
     int retval = -1;
 
-    if((configs = get_configs())) {
+    if ((configs = get_configs())) {
         list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec);
         
-        if(!prev_error) {
+        if (!prev_error) {
             print_docs_num(list, color);
             retval = 0;
         }  
-
         opts_cleanup(configs, list);
     }
 
@@ -112,38 +113,44 @@ static int count_opt(const char *str, bool ignore,
 }
 
 
-static void opts_cleanup(struct users_configs *configs, struct doc_list *ptr) {
-    if(ptr)
+static void opts_cleanup(struct users_configs *configs, struct doc_list *ptr) 
+{
+    if (ptr)
         free_doc_list(ptr);
 
     free_users_configs(configs);
 }
 
 
-static int rearrange_if_needed(struct doc_list *list, 
-                               bool sort, bool reverse) {
-    if(sort)
-        if(sort_docs_alpha(list))
-            return -1;
-    
-    if(reverse)
-        reverse_l_list_obj(list);
+static struct doc_list *rearrange_if_needed(struct doc_list *list, 
+                                            bool sort, bool reverse) 
+{
+    struct doc_list *rearranged = list;
 
-    return 0;
+    if (sort)
+        if (!(rearranged = sort_docs_names_alpha(list)))
+            return NULL;
+    
+    if (reverse)
+        rearranged = reverse_doc_list(list);
+
+    return rearranged;
 }
 
 
 static int list_opt(const char *str, bool ignore, bool rec, 
-                    bool color, bool sort, bool reverse) {
+                    bool color, bool sort, bool reverse) 
+{
+    struct doc_list *list, *rearranged;
     struct users_configs *configs;
-    struct doc_list *list;
     int retval = -1;
     
-    if((configs = get_configs())) {
-        if((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if(!(retval = rearrange_if_needed(list, sort, reverse)))
-                display_docs(list, color);
-        
+    if ((configs = get_configs())) {
+        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
+            if ((rearranged = rearrange_if_needed(list, sort, reverse))) {
+                display_docs_names(rearranged, color);
+                retval = 0;
+            }
         opts_cleanup(configs, list);
     }
 
@@ -151,26 +158,16 @@ static int list_opt(const char *str, bool ignore, bool rec,
 }
 
 
-/*
- * This funtion is going to be used only when there's at least
- * one document in the doc_list.
- *
 static int open_doc_list(struct users_configs *configs, 
-                         const struct doc_list *list,
-			         	 bool rec, bool color) {
-	const struct doc_list *ptr = list;
-	char *doc_path;
+                         const struct doc_list *list, bool color) 
+{
 	int retval = 0;
 
-	for(; ptr && !retval; ptr=ptr->next) {
-		if((doc_path = get_doc_path_multi_dir(configs->docs_dir_path, ptr->obj, rec))) {
-			if(!(retval = open_founded_doc_path(configs, doc_path)))
-				print_opening_doc(ptr->obj, color);
-			
-			free(doc_path);
-		}
-		else 
-			retval = -1;
+	for (; list; list=list->next) {
+		if ((retval = open_doc_path(configs, list->path)))
+            break;
+        
+		print_opening_doc(list->name, color);
 	}
 	
 	return retval;
@@ -178,24 +175,23 @@ static int open_doc_list(struct users_configs *configs,
 
 
 static int open_opt(const char *str, bool ignore, bool rec, bool color, 
-                    bool sort, bool reverse, bool numerous) {
+                    bool sort, bool reverse, bool numerous) 
+{
     struct users_configs *configs;
-    struct l_list *doc_list;
+    struct doc_list *list;
     int retval = -1;
     
-    if((configs = get_configs())) {
-        if((doc_list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec))) {
-            if(numerous)
-                retval = numerous_opening(configs, doc_list, rec, color, sort, reverse);
-            
-            else if(count_l_list_nodes(doc_list) == 1)
-                retval = open_doc_list(configs, doc_list, rec, color);
-
+    if ((configs = get_configs())) {
+        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, 
+                                             str, ignore, rec))) {
+            if (numerous)
+                retval = numerous_opening(configs, list, color, sort, reverse);
+            else if (count_doc_list_nodes(list) == 1)
+                retval = open_doc_list(configs, list, color);
             else 
                 big_docs_num_error();   
         }
-            
-        opts_cleanup(configs, doc_list);
+        opts_cleanup(configs, list);
     }
 
     return retval;
@@ -209,26 +205,30 @@ static void big_docs_num_error() {
 
 
 static int numerous_opening(struct users_configs *configs, struct doc_list *list,
-                            bool rec, bool color, bool sort, bool reverse) {
-    if(rearrange_if_needed(list, sort, reverse))
+                            bool color, bool sort, bool reverse) 
+{
+    struct doc_list *rearranged;
+
+    if (!(rearranged = rearrange_if_needed(list, sort, reverse)))
         return -1;
     
-    return open_doc_list(configs, list, rec, color);
-}*/
+    return open_doc_list(configs, rearranged, color);
+}
 
 
 static int details_opt(const char *str, bool ignore, bool rec, 
-                       bool color, bool sort, bool reverse) {
+                       bool color, bool sort, bool reverse) 
+{
+    struct doc_list *list, *rearranged;
     struct users_configs *configs;
-    struct doc_list *list;
     int retval = -1;
 
-    if((configs = get_configs())) {
-        if((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if(!rearrange_if_needed(list, sort, reverse))
-                retval = print_doc_list_details(configs->docs_dir_path, list, rec, color);
+    if ((configs = get_configs())) {
+        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
+            if ((rearranged = rearrange_if_needed(list, sort, reverse)))
+                retval = print_docs_details(rearranged, color);
 
-        opts_cleanup(configs, doc_list);
+        opts_cleanup(configs, list);
     }
     
     return retval;

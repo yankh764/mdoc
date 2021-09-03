@@ -51,11 +51,12 @@ char *get_line(FILE *stream)
 		 */
 		line_address = line;
 	}	
-	if (line)
+	if (line) {
 		if (!(line = realloc_inf(line, sizeof(char) * (i+1))))	
 			goto error;
 
-	line[i] = '\0';	
+		line[i] = '\0';	
+	}
 
 	return line;
 

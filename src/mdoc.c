@@ -52,7 +52,7 @@ static bool if_save_doc(const char *, const char *, bool);
 static void print_docs_no_color(const struct doc_list *);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
-static struct doc_list *reorganize_doc_list_alpha(struct doc_list *, struct doc_list **);
+static struct doc_list *get_doc_list_alpha(struct doc_list **, unsigned int);
 static void *alloc_doc_list();
 static int open_doc(char *const *);
 static unsigned int prep_add_args(char **, char *, unsigned int);
@@ -583,14 +583,13 @@ struct doc_list *sort_docs_names_alpha(struct doc_list *ptr)
 	const unsigned int nodes_num = count_doc_list_nodes(ptr);
 	struct doc_list *unsorted_array[nodes_num];
 	struct doc_list *sorted_array[nodes_num];
-	struct doc_list *retval = NULL;
 
 	save_doc_list_nodes(ptr, unsorted_array);
 
-	if (!sort_doc_list(unsorted_array, sorted_array, nodes_num))
-		retval = reorganize_doc_list_alpha(ptr, sorted_array);
-	
-	return retval;
+	if (sort_doc_list(unsorted_array, sorted_array, nodes_num))
+		return NULL;		
+
+	return get_doc_list_alpha(sorted_array, nodes_num);
 }
 
 
@@ -661,21 +660,18 @@ static void adjust_smallest_val(char **smallest, char **current,
 }
 
 
-/*
- * Reorganize the linked list's objects alphabetically.
- */
-static struct doc_list *reorganize_doc_list_alpha(struct doc_list *ptr, 
-												  struct doc_list **sorted_array) 
+static struct doc_list *get_doc_list_alpha(struct doc_list **sorted_array, 
+										   unsigned int nodes_num) 
 {
 	struct doc_list *sorted = NULL;
 	struct doc_list *current_node;
 	unsigned int i;
 
-	for (i=0; ptr; ptr=ptr->next) {
+	for (i=0; i<nodes_num; i++) {
 		if (!sorted)
-			current_node = sorted = sorted_array[i++];
+			current_node = sorted = sorted_array[i];
 		else
-			current_node = current_node->next = sorted_array[i++];
+			current_node = current_node->next = sorted_array[i];
 		/* In case this node is the last one */
 		current_node->next = NULL;
 	}

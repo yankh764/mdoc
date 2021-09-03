@@ -89,8 +89,7 @@ static struct users_configs *input_configs()
 		 */
 		if (!(input->docs_dir_path = input_docs_dir_path()) ||
 			!(input->pdf_viewer = input_pdf_viewer_name())  ||
-			(!(input->add_args = input_add_args())          && 
-		      errno))
+			(!(input->add_args = input_add_args()) && errno))
 			/* Failure */
 			 free_and_null_users_configs(&input);
 	}
@@ -177,8 +176,7 @@ static struct users_configs * read_config_file(FILE *fp) {
 		 */
 		if(!(configs->docs_dir_path = get_line_inf(fp)) ||
 		   !(configs->pdf_viewer = get_line_inf(fp))    ||
-		   (!(configs->add_args = get_line(fp))         &&
-			  errno))
+		   (!(configs->add_args = get_line(fp)) && errno))
 			/* Failure */
 			free_and_null_users_configs(&configs);
 	}
