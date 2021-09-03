@@ -136,9 +136,6 @@ After doing the previous steps you will be ready to enjoy your new document mana
 * Adding support for the user to add environment variable that changes the config file's path.
 
 
-## Known Issues 
-* An unexpected results may occur if you have files with an identical names in different locations.
-
 ## Contributing
 Pull requests are welcomed...
 
