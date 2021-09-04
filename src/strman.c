@@ -121,7 +121,7 @@ unsigned int count_words(const char *line)
 		if (isspace(line[i]))
 			inside = 0;
 		else {
- 			if(!inside) 
+ 			if (!inside) 
 				words++;
 			
 			inside = 1;

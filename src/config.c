@@ -22,7 +22,7 @@ static char *get_line_inf(FILE *);
 static char *input_docs_dir_path();
 static char *input_pdf_viewer_name();
 static char *input_add_args();
-static void null_users_configs(struct users_configs *);
+static void null_users_configs_members(struct users_configs *);
 static void *alloc_users_configs();
 static void free_and_null_users_configs(struct users_configs **);
 static struct users_configs * read_config_file(FILE *);
@@ -81,7 +81,7 @@ static struct users_configs *input_configs()
     struct users_configs *input;
 
 	if ((input = alloc_users_configs())) {
-		null_users_configs(input);
+		null_users_configs_members(input);
 		/*
 		 * Get all the necessary input from the user.
 		 * Note: inputting add_args is optional, so the program
@@ -126,9 +126,9 @@ int generate_config(const char *abs_config_path)
 			write_configs(fp, configs);			
 			free_users_configs(configs); 
 			
+			printf("\nYour configurations were generated succesfully.\n");
 			retval = 0;
 		}
-		
 		if (fclose_inf(fp))
 			retval = -1;
 	}	
@@ -143,8 +143,6 @@ static void write_configs(FILE *fp, const struct users_configs *configs)
 	
 	if (configs->add_args)
 		fprintf(fp, "%s\n", configs->add_args);
-	
-	printf("\nYour configurations were generated succesfully.\n");
 }
 
 
@@ -164,19 +162,20 @@ struct users_configs *read_configs(const char *abs_config_path)
 }
 
 
-static struct users_configs * read_config_file(FILE *fp) {
+static struct users_configs *read_config_file(FILE *fp) 
+{
 	struct users_configs *configs;
 	
-	if((configs = alloc_users_configs())) {
-		null_users_configs(configs);
+	if ((configs = alloc_users_configs())) {
+		null_users_configs_members(configs);
 		/*
 		 * Get all the necessary config sections from the file.
 		 * Note: reading add_args is optional, so the program
 		 * will fail only if it's missing due to an error.
 		 */
-		if(!(configs->docs_dir_path = get_line_inf(fp)) ||
-		   !(configs->pdf_viewer = get_line_inf(fp))    ||
-		   (!(configs->add_args = get_line(fp)) && errno))
+		if (!(configs->docs_dir_path = get_line_inf(fp)) ||
+		    !(configs->pdf_viewer = get_line_inf(fp))    ||
+		    (!(configs->add_args = get_line(fp)) && errno))
 			/* Failure */
 			free_and_null_users_configs(&configs);
 	}
@@ -185,19 +184,21 @@ static struct users_configs * read_config_file(FILE *fp) {
 }
 
 
-static void null_users_configs(struct users_configs *configs) {
+static void null_users_configs_members(struct users_configs *configs) 
+{
 	configs->docs_dir_path = NULL;
 	configs->pdf_viewer = NULL;
 	configs->add_args = NULL;
 }
 
 
-void free_users_configs(struct users_configs *ptr) {
-	if(ptr->docs_dir_path)
+void free_users_configs(struct users_configs *ptr) 
+{
+	if (ptr->docs_dir_path)
 		free(ptr->docs_dir_path);
-	if(ptr->pdf_viewer)
+	if (ptr->pdf_viewer)
 		free(ptr->pdf_viewer);
-	if(ptr->add_args)
+	if (ptr->add_args)
 		free(ptr->add_args);
 	
 	free(ptr);

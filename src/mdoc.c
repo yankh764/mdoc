@@ -24,7 +24,6 @@
 #define ANSI_COLOR_RESET  "\x1b[0m"
 
 
-
 /* To indicate if an previous error occoured in a functions
    that could overwrite errno with 0 (success) before returning */
 bool prev_error = 0;
@@ -46,26 +45,25 @@ static char *get_entry_path(const char *, const char *);
 static struct doc_list *get_last_node(const struct doc_list *);
 static char *prep_open_doc_argv(char **, const char *, const char *, const char *);
 static void adjust_doc_list_members(struct doc_list *, const char *, const char *, const struct stat *); 
-static void print_docs_colorful(const struct doc_list *);
+static void display_doc_name_colorful(const char *);
 static bool dot_entry(const char *); 
 static bool if_save_doc(const char *, const char *, bool);
-static void print_docs_no_color(const struct doc_list *);
+static void display_doc_name_no_color(const char *);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
-static struct doc_list *get_doc_list_alpha(struct doc_list **, unsigned int);
+static struct doc_list *get_doc_list_alpha(struct doc_list **, const unsigned int);
 static void *alloc_doc_list();
 static int open_doc(char *const *);
 static unsigned int prep_add_args(char **, char *, unsigned int);
 static struct doc_list *search_for_doc(const char *, const char *, bool, bool);
 static struct doc_list *search_for_doc_retval(struct doc_list *, struct doc_list *,  struct doc_list *);
-static void search_for_doc_multi_dir_err(struct doc_list **);
 static void print_docs_num_color(const unsigned int, const char *);
 static void print_docs_num_no_color(const unsigned int, const char *);
 static void print_opening_doc_color(const char *);
 static void print_opening_doc_no_color(const char *);
 static struct doc_list *search_for_doc_multi_dir_split(char *, const char *, bool, bool);
-static void print_doc_size(const off_t, bool);
-static struct meas_unit get_proper_size_format(const off_t);
+static void print_doc_size(off_t, bool);
+static struct meas_unit get_proper_size_format(off_t);
 static float bytes_to_gb(off_t); 
 static float bytes_to_mb(off_t);
 static float bytes_to_kb(off_t);
@@ -81,8 +79,6 @@ static void print_last_mod_time_no_color(const char *);
 static void print_doc_modes(const mode_t, bool);
 static void print_doc_modes_color(const mode_t); 
 static void print_doc_modes_no_color(const mode_t); 
-static void remove_extra_space(char *);
-static unsigned int get_extra_space_i(const char *);
 static int save_proper_dir_content(const char *, const char*, bool, bool, struct doc_list **, struct doc_list **);
 static struct doc_list *free_doc_list_node(struct doc_list *);
 static struct doc_list *save_doc(const char *, const char *, const struct stat *);
@@ -95,12 +91,11 @@ static void print_doc_name_no_color(const char *);
 static char *get_last_mod_time(const time_t);
 static void *alloc_stat_struct();
 static struct stat *get_stat_dynamic(const char *);
-static int print_doc_details(const struct doc_list *, bool);
-static void separate_if_needed(const struct doc_list *);
 static void save_doc_list_nodes(const struct doc_list *, struct doc_list **);
-static int sort_doc_list(struct doc_list **, struct doc_list **, unsigned int);
+static int sort_doc_list(struct doc_list **, struct doc_list **, const unsigned int);
 static long int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
 static void adjust_smallest_val(char **, char **, unsigned int *, unsigned int);
+static char *get_add_args_cp(const char *);
 
 
 
@@ -200,8 +195,8 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 			
 			if (!(stbuf = get_stat_dynamic(new_path)))
 				/* 
-				 * Failed to allocate stbuf, so jump upon it and free new_path
-				 * then continue to the rest of the errors labels.
+				 * Failed to allocate stbuf, so free the not passed to a node
+				 * new_path then continue to the rest of the errors labels.
 				 */
 				goto free_new_path;
 
@@ -251,8 +246,7 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 		goto error;	
 	}
 
-	return search_for_doc_retval(current_node, doc_list_begin, 
-								 doc_list_rec_begin);
+	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
 
 /* ERRORS CLEANUP */
 free_stbuf:
@@ -373,7 +367,6 @@ static struct doc_list *search_for_doc_retval(struct doc_list *current_node,
 	if (doc_list_begin) {
 		if (doc_list_rec_begin)
 			current_node->next = doc_list_rec_begin;
-
 		return doc_list_begin;
 	
 	} else if (doc_list_rec_begin) {
@@ -392,29 +385,27 @@ static void catch_readdir_inf_err()
 }
 
 
-void display_docs_names(const struct doc_list *ptr, bool color_status) 
+void display_doc_name(const char *name, bool color_status) 
 {
 		if (color_status)
-			print_docs_colorful(ptr);
+			display_doc_name_colorful(name);
 		else
-			print_docs_no_color(ptr);
+			display_doc_name_no_color(name);
 
 }
 
 
-static void print_docs_colorful(const struct doc_list *ptr) 
+static void display_doc_name_colorful(const char *name) 
 {
-	for (; ptr; ptr=ptr->next)
-		printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "+" ANSI_COLOR_BLUE "]" 
-		       ANSI_COLOR_RED " %s" ANSI_COLOR_RESET "\n", 
-		       ptr->name);
+	printf(ANSI_COLOR_BLUE "[" ANSI_COLOR_GREEN "+" ANSI_COLOR_BLUE "]" 
+		   ANSI_COLOR_RED " %s" ANSI_COLOR_RESET "\n", 
+		   name);
 }
 
 
-static void print_docs_no_color(const struct doc_list *ptr) 
+static void display_doc_name_no_color(const char *name) 
 {
-	for (; ptr; ptr=ptr->next)
-		printf("[+] %s\n", ptr->name);
+	printf("[+] %s\n", name);
 }
 
 
@@ -450,11 +441,23 @@ static char *prep_open_doc_argv(char **argv, const char *pdf_viewer,
 	argv[i++] = (char *) pdf_viewer;
 
 	if (add_args)
-		if ((add_args_cp = strcpy_dynamic(add_args)))
+		if ((add_args_cp = get_add_args_cp(add_args)))
 			i = prep_add_args(argv, add_args_cp, i);
 
 	argv[i++] = (char *) doc_path;
 	argv[i] = NULL;
+
+	return add_args_cp;
+}
+
+
+static char *get_add_args_cp(const char *add_args)
+{
+	char *add_args_cp;
+
+	if (!(add_args_cp = strcpy_dynamic(add_args)))
+		/* To distinguish between an error and empty add_args */
+		prev_error = 1;
 
 	return add_args_cp;
 }
@@ -491,19 +494,14 @@ int open_doc_path(const struct users_configs *configs, const char *doc_path)
 	char *add_args_cp;
 	int retval = -1;
 
-	/*
-	 * Reset errno to 0 since it'll be cruicial for the 
-	 * next if statement
-	 */
-	errno = 0;
-	
 	add_args_cp = prep_open_doc_argv(argv, configs->pdf_viewer, 
 									 configs->add_args, doc_path);
-	if (!errno)
+	if (!prev_error) {
 		retval = open_doc(argv);
 
-	if (add_args_cp)
-		free(add_args_cp);
+		if (add_args_cp)
+			free(add_args_cp);
+	}
 
     return retval;
 }
@@ -549,9 +547,8 @@ static void print_opening_doc_no_color(const char *doc_name)
 }
 
 
-void print_docs_num(const struct doc_list *ptr, bool color) 
+void print_docs_num(const unsigned int docs_num, bool color) 
 {
-    const unsigned int docs_num = count_doc_list_nodes(ptr);
 	const char *file = (docs_num == 1) ? 
         "File" : "Files";
 
@@ -578,7 +575,10 @@ static void print_docs_num_no_color(const unsigned int num,
 }
 
 
-struct doc_list *sort_docs_names_alpha(struct doc_list *ptr) 
+/*
+ * Return a pointer to a rearranged ptr
+ */
+struct doc_list *sort_docs_names_alpha(const struct doc_list *ptr) 
 {
 	const unsigned int nodes_num = count_doc_list_nodes(ptr);
 	struct doc_list *unsorted_array[nodes_num];
@@ -595,7 +595,7 @@ struct doc_list *sort_docs_names_alpha(struct doc_list *ptr)
 
 static int sort_doc_list(struct doc_list **unsorted_array, 
 						 struct doc_list **sorted_array, 
-						 unsigned int nodes_num)
+						 const unsigned int nodes_num)
 {
 	unsigned int i;
 	long int ret;
@@ -615,17 +615,27 @@ static int sort_doc_list(struct doc_list **unsorted_array,
 static long int get_smallest_doc_name_i(struct doc_list **array, 
 										const unsigned int nodes_num)
 {
-	unsigned int i, smallest_i;
+	/* 
+     * I initialized smallest_i to zero get rid of the 
+	 * unaccurate -Wmaybe-uninitialized warning when 
+	 * compiling with GCC.
+     */
+	unsigned int smallest_i = 0;
 	char *smallest = NULL;
 	char *current;
+	unsigned int i;
 	
-	for (i=0, smallest_i=0; i<nodes_num; i++) {
+	for (i=0; i<nodes_num; i++) {
 		if (!array[i])
 			continue;
 
 		if (smallest) {
 			if (!(current = small_let_copy(array[i]->name)))
-				goto free_smallest;
+				/* 
+				 * smallest is allocated, so goto 
+				 * fail_alloc_current and free it
+				 */
+				goto fail_alloc_current;
 			/* If current word needs to come before smallest word */
 			if(alpha_cmp(smallest, current))
 				adjust_smallest_val(&smallest, &current, &smallest_i, i);
@@ -638,14 +648,12 @@ static long int get_smallest_doc_name_i(struct doc_list **array,
 			smallest_i = i;
 		}
 	}
-	if (smallest)
-		free(smallest);
+	free(smallest);
 
 	return smallest_i;
 
-free_smallest:
-	if (smallest)
-		free(smallest);
+fail_alloc_current:
+	free(smallest);
 error:
 	return -1;
 }
@@ -661,7 +669,7 @@ static void adjust_smallest_val(char **smallest, char **current,
 
 
 static struct doc_list *get_doc_list_alpha(struct doc_list **sorted_array, 
-										   unsigned int nodes_num) 
+										   const unsigned int nodes_num) 
 {
 	struct doc_list *sorted = NULL;
 	struct doc_list *current_node;
@@ -680,7 +688,10 @@ static struct doc_list *get_doc_list_alpha(struct doc_list **sorted_array,
 }
 
 
-struct doc_list *reverse_doc_list(struct doc_list *ptr) 
+/*
+ * Return a pointer to a reversed ptr
+ */
+struct doc_list *reverse_doc_list(const struct doc_list *ptr) 
 {
 	const unsigned int nodes_num = count_doc_list_nodes(ptr);
 	struct doc_list *nodes_array[nodes_num];
@@ -713,9 +724,6 @@ static void save_doc_list_nodes(const struct doc_list *ptr,
 }
 
 
-/*
- * The same as search_for_doc() but with multiple documents directory support.
- */
 struct doc_list *search_for_doc_multi_dir(const char *dirs_path, const char *str, 
                                           bool ignore_case, bool rec) 
 {
@@ -748,7 +756,9 @@ static struct doc_list *search_for_doc_multi_dir_split(char *dirs_path,
 		if (*dirs_path != '\0') 
 			if (save_proper_dir_content(dirs_path, str, ignore_case, rec, 
 			 					        &doc_list_begin, &current_node)) {
-				search_for_doc_multi_dir_err(&doc_list_begin);
+				if (doc_list_begin)
+					free_and_null_doc_list(&doc_list_begin);
+
 				break;
 			}
 
@@ -763,14 +773,7 @@ static void free_and_null_doc_list(struct doc_list **ptr)
 }
 
 
-static void search_for_doc_multi_dir_err(struct doc_list **doc_list_begin) 
-{
-	if (*doc_list_begin)
-		free_and_null_doc_list(doc_list_begin);
-}
-
-
-static struct meas_unit get_proper_size_format(const off_t bytes) 
+static struct meas_unit get_proper_size_format(off_t bytes) 
 {
 	const off_t gb = 1000000000;
 	const off_t mb = 1000000;
@@ -820,7 +823,7 @@ static float bytes_to_kb(off_t bytes)
 }
 
 
-static void print_doc_size(const off_t bytes, bool color)  
+static void print_doc_size(off_t bytes, bool color)  
 {
 	const struct meas_unit format = get_proper_size_format(bytes);
 
@@ -873,7 +876,7 @@ static void print_doc_path_no_color(const char *doc_path)
 }
 
 
-static int print_doc_details(const struct doc_list *list, bool color) 
+int print_doc_details(const struct doc_list *list, bool color) 
 {
 	char *time_buf;
 
@@ -888,41 +891,6 @@ static int print_doc_details(const struct doc_list *list, bool color)
 	free(time_buf);
 
 	return 0;
-}
-
-
-int print_docs_details(const struct doc_list *list, bool color)
-{
-	int ret = 0;
-
-	for (;list && !ret; list=list->next)
-		if (!(ret = print_doc_details(list, color)))
-			separate_if_needed(list->next);
-
-	return ret;
-}
-
-
-/*
- * Separate the details on each document if needed (if there's 
- * another document after it).
- */
-static void separate_if_needed(const struct doc_list *ptr) 
-{
-    /* const char separator[] = 
-        "-----------------------------"
-        "-----------------------------"
-        "-----------------------------"
-        "-----------------------------"
-        "-----------------------------"
-        "--\n"; 
-    */
-    
-    /* For now the separator will be a new line */
-    const char separator[] = "\n";
-
-    if (ptr)
-        printf("%s", separator);
 }
 
 
@@ -945,13 +913,9 @@ static char *get_last_mod_time(const time_t timep)
 	const unsigned int size = 35;
 	char *buffer;
 
-	if ((buffer = malloc_inf(sizeof(char) * size))) {
-		if (ctime_r_inf(&timep, buffer))
-			remove_extra_space(buffer);
-		else	
+	if ((buffer = malloc_inf(sizeof(char) * size)))
+		if (!ctime_r_inf(&timep, buffer))
 			free_and_null((void **) &buffer);
-	}
-	
 
 	return buffer;
 }
@@ -969,38 +933,6 @@ static void print_last_mod_time_no_color(const char *buffer)
 {
 	printf("[TIME] %s", buffer);	
 }
-
-
-/*
- * A function to remove the annoying extra space that is
- * passed to the buffer by the function ctime_r().
- */
-static void remove_extra_space(char *buffer) 
-{
-	unsigned int i = get_extra_space_i(buffer);
-
-	for (; buffer[i]!='\0'; i++)
-		buffer[i] = buffer[i+1];
-}
-
-
-static unsigned int get_extra_space_i(const char *buffer) 
-{
-	unsigned int i, space;
-
-	for (i=0, space=0; buffer[i]!='\0'; i++) {
-		if (buffer[i] == ' ')
-			space++;
-		else
-			space = 0;
-
-		if (space > 1)
-			break;
-	}
-
-	return i;
-}
-
 
 static void print_doc_modes(const mode_t mode, bool color) 
 {
@@ -1078,7 +1010,7 @@ static int save_proper_dir_content(const char *dir_path,
 			*current_node = get_last_node(*beginning);
 	} else {
 		if (((*current_node)->next = search_for_doc(dir_path, str, ignore, rec)))
-			*current_node = get_last_node((*current_node)->next);
+			*current_node = get_last_node(*current_node);
 	}
 
 	return prev_error ?

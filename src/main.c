@@ -39,11 +39,14 @@ static void opts_cleanup(struct users_configs *, struct doc_list *);
 static void big_docs_num_error();
 static struct doc_list *rearrange_if_needed(struct doc_list *, bool, bool); 
 static int list_opt(const char *, bool, bool, bool, bool, bool);
-static int numerous_opening(struct users_configs *, struct doc_list *, bool, bool, bool);
+static int numerous_opening(const struct users_configs *, struct doc_list *, bool, bool, bool);
 static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
-static int open_doc_list(struct users_configs *, const struct doc_list *, bool);
+static int open_doc_list(const struct users_configs *, const struct doc_list *, bool);
 static int details_opt(const char *, bool, bool, bool, bool, bool);
 static char *get_opt_arg(const char *);
+static void display_docs_names(const struct doc_list *, bool);
+static int print_docs_details(const struct doc_list *, bool);
+static void separate_if_needed(const struct doc_list *);
 
 
 
@@ -103,7 +106,7 @@ static int count_opt(const char *str, bool ignore, bool rec, bool color)
         list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec);
         
         if (!prev_error) {
-            print_docs_num(list, color);
+            print_docs_num(count_doc_list_nodes(list), color);
             retval = 0;
         }  
         opts_cleanup(configs, list);
@@ -158,16 +161,23 @@ static int list_opt(const char *str, bool ignore, bool rec,
 }
 
 
-static int open_doc_list(struct users_configs *configs, 
-                         const struct doc_list *list, bool color) 
+static void display_docs_names(const struct doc_list *ptr, bool color)
 {
-	int retval = 0;
+    for(; ptr; ptr=ptr->next)
+        display_doc_name(ptr->name, color);
+}
 
-	for (; list; list=list->next) {
-		if ((retval = open_doc_path(configs, list->path)))
+
+static int open_doc_list(const struct users_configs *configs, 
+                         const struct doc_list *ptr, bool color) 
+{
+	int retval;
+
+	for (; ptr; ptr=ptr->next) {
+		if ((retval = open_doc_path(configs, ptr->path)))
             break;
         
-		print_opening_doc(list->name, color);
+		print_opening_doc(ptr->name, color);
 	}
 	
 	return retval;
@@ -204,7 +214,8 @@ static void big_docs_num_error() {
 }
 
 
-static int numerous_opening(struct users_configs *configs, struct doc_list *list,
+static int numerous_opening(const struct users_configs *configs, 
+                            struct doc_list *list,
                             bool color, bool sort, bool reverse) 
 {
     struct doc_list *rearranged;
@@ -235,17 +246,57 @@ static int details_opt(const char *str, bool ignore, bool rec,
 }
 
 
-static char *get_opt_arg(const char *last_argv) {
+static int print_docs_details(const struct doc_list *ptr, bool color)
+{
+	int retval;
+
+	for (;ptr; ptr=ptr->next) {
+		if ((retval = print_doc_details(ptr, color)))
+			break;
+
+        separate_if_needed(ptr->next);
+    }
+
+	return retval;
+}
+
+
+/*
+ * Separate the details on each document if needed (if there's 
+ * another document after it).
+ */
+static void separate_if_needed(const struct doc_list *ptr) 
+{
+    /* const char separator[] = 
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "-----------------------------"
+        "--\n"; 
+    */
+    
+    /* For now the separator will be a new line */
+    const char separator[] = "\n";
+
+    if (ptr)
+        printf("%s", separator);
+}
+
+
+static char *get_opt_arg(const char *last_argv) 
+{
     char *optarg = NULL;
     
-    if(*last_argv != '-')
+    if (*last_argv != '-')
         optarg = (char *) last_argv;
 
     return optarg;
 }
 
 
-static int missing_arg_err(const int opt) {
+static int missing_arg_err(const int opt) 
+{
     fprintf(stderr, "%s: missing argument for the '-%c' option\n", prog_name_inf, opt);
     fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 
@@ -253,7 +304,8 @@ static int missing_arg_err(const int opt) {
 }
 
 
-static int invalid_arg_err(const int opt) {
+static int invalid_arg_err(const int opt) 
+{
     fprintf(stderr, "%s: invalid option '-%c'\n", prog_name_inf, opt);
     fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 
@@ -261,7 +313,8 @@ static int invalid_arg_err(const int opt) {
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) 
+{
     const char valid_opt[] = ":hgsraincldoRC";
     /* 
      * I initialized the options argument pointers
@@ -290,108 +343,99 @@ int main(int argc, char **argv) {
 
     prog_name_inf = argv[0];
   
-    if(argc == 1)
+    if (argc == 1)
         display_help(prog_name_inf);
 
-    while((opt = getopt(argc, argv, valid_opt)) != EOF) {
-        switch(opt) {
-            case 'h':
-                help = 1;
-                break;
-            case 'g':
-                generate = 1;
-                break;
-            case 's':
-                sort = 1;
-                break;
-            case 'r':
-                reverse = 1;
-                break;
-            case 'a':
-                all = 1;
-                break;
-            case 'i':
-                ignore = 1;
-                break;
-            case 'n':
-                numerous = 1;
-                break;
-            case 'c':
-                count = 1;
-                count_arg = get_opt_arg(argv[argc-1]);
-                break;
-            case 'l':
-                list = 1;
-                list_arg = get_opt_arg(argv[argc-1]);
-                break;
-            case 'd':
-                details = 1;
-                details_arg = get_opt_arg(argv[argc-1]);
-                break;
-            case 'o':
-                open = 1;
-                open_arg = get_opt_arg(argv[argc-1]);
-                break;
-            case 'R':
-                recursive = 0;
-                break;
-            case 'C':
-                color = 0;
-                break;
-            default:
-                return invalid_arg_err(optopt);
+    while ((opt = getopt(argc, argv, valid_opt)) != EOF) 
+        switch (opt) {
+        case 'h':
+            help = 1;
+            break;
+        case 'g':
+            generate = 1;
+            break;
+        case 's':
+            sort = 1;
+            break;
+        case 'r':
+            reverse = 1;
+            break;
+        case 'a':
+            all = 1;
+            break;
+        case 'i':
+            ignore = 1;
+            break;
+        case 'n':
+            numerous = 1;
+            break;
+        case 'c':
+            count = 1;
+            count_arg = get_opt_arg(argv[argc-1]);
+            break;
+        case 'l':
+            list = 1;
+            list_arg = get_opt_arg(argv[argc-1]);
+            break;
+        case 'd':
+            details = 1;
+            details_arg = get_opt_arg(argv[argc-1]);
+            break;
+        case 'o':
+            open = 1;
+            open_arg = get_opt_arg(argv[argc-1]);
+            break;
+        case 'R':
+            recursive = 0;
+            break;
+        case 'C':
+            color = 0;
+            break;
+        default:
+            return invalid_arg_err(optopt);
         }
-    }
 
-    if(help)
+    if (help) {
         display_help(prog_name_inf);
-   
-    else if(generate) {
-        if(generate_opt())
+    
+    } else if (generate) {
+        if (generate_opt())
             return PROG_ERROR;
-    }
-
-    else if(count) {
-        if(all) 
+    
+    } else if (count) {
+        if (all) 
             count_arg = NULL;
-           
-        else if(!count_arg)
+        else if (!count_arg)
             return missing_arg_err('c');
         
-        if(count_opt(count_arg, ignore, recursive, color))
+        if (count_opt(count_arg, ignore, recursive, color))
             return PROG_ERROR;
-    }
-
-    else if(list) {
-        if(all)
+    
+    } else if (list) {
+        if (all)
             list_arg = NULL;
-
-        else if(!list_arg)
+        else if (!list_arg)
             return missing_arg_err('l');
         
-        if(list_opt(list_arg, ignore, recursive, color, sort, reverse))
+        if (list_opt(list_arg, ignore, recursive, color, sort, reverse))
             return PROG_ERROR;
-    }
     
-    else if(details) {
-        if(all)
+    } else if (details) {
+        if (all)
             details_arg = NULL;
-        
-        else if(!details_arg)
+        else if (!details_arg)
             return missing_arg_err('d');
 
-        if(details_opt(details_arg, ignore, recursive, color, sort, reverse))
+        if (details_opt(details_arg, ignore, recursive, color, sort, reverse))
             return PROG_ERROR;
-    }
-
-    else if(open) {
-        if(all)
+    
+    } else if (open) {
+        if (all)
             open_arg = NULL;
-
-        else if(!open_arg)
+        else if (!open_arg)
             return missing_arg_err('o');
 
-        if(open_opt(open_arg, ignore, recursive, color, sort, reverse, numerous))
+        if (open_opt(open_arg, ignore, recursive, color, sort, reverse, numerous))
             return PROG_ERROR;
     }
 
