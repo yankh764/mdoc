@@ -131,11 +131,11 @@ static struct doc_list *rearrange_if_needed(struct doc_list *list,
     struct doc_list *rearranged = list;
 
     if (sort)
-        if (!(rearranged = sort_docs_names_alpha(rearranged)))
+        if (!(rearranged = sort_docs_names_alpha(list)))
             return NULL;
     
     if (reverse)
-        rearranged = reverse_doc_list(rearranged);
+        rearranged = reverse_doc_list(list);
 
     return rearranged;
 }
