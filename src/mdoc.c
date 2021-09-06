@@ -47,7 +47,7 @@ static char *prep_open_doc_argv(char **, const char *, const char *, const char 
 static void adjust_doc_list_members(struct doc_list *, const char *, const char *, const struct stat *); 
 static void display_doc_name_colorful(const char *);
 static bool dot_entry(const char *); 
-static bool if_save_doc(const char *, const char *, bool);
+static bool check_str_occurrence(const char *, const char *, bool);
 static void display_doc_name_no_color(const char *);
 static unsigned int get_argc_val(const char *);
 static void free_and_null(void **);
@@ -96,6 +96,7 @@ static int sort_doc_list(struct doc_list **, struct doc_list **, const unsigned 
 static long int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
 static void adjust_smallest_val(char **, char **, unsigned int *, unsigned int);
 static char *get_add_args_cp(const char *);
+static struct doc_list *get_dir_content(const char *, const char *, bool, bool);
 
 
 
@@ -211,7 +212,7 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 						 */
 						goto free_stbuf;
 			} else if (S_ISREG(stbuf->st_mode)) {
-				if (if_save_doc(entry->d_name, str, ignore_case)) {
+				if (check_str_occurrence(entry->d_name, str, ignore_case)) {
 					if (save_doc_to_proper_var(new_path, entry->d_name, stbuf, 
 											   &doc_list_begin, &current_node))
 						/*
@@ -341,11 +342,9 @@ static struct doc_list *save_doc(const char *doc_path,
 }
 
 
-/* Check if to save the document name to the document list.
- * Return 1 for yes, 0 for no and -1 for error.
- */
-static bool if_save_doc(const char *doc_name, 
-                        const char *str, bool ignore) 
+static bool check_str_occurrence(const char *name, 
+								 const char *str, 
+								 bool ignore) 
 {
 	/* If str is NULL, save every 
 	   file name to the linked list */
@@ -353,9 +352,9 @@ static bool if_save_doc(const char *doc_name,
 		return 1;
 	
 	if (ignore)
-		return strstr_i(doc_name, str);
+		return strstr_i(name, str);
 
-	return strstr(doc_name, str) ? 
+	return strstr(name, str) ? 
 		1 : 0;
 }
 
@@ -1018,6 +1017,69 @@ static int save_proper_dir_content(const char *dir_path,
 }
 
 
+/*
+ * Get dir's content that exists in the documents  
+ * dir path and has str sequence in it's name
+ */
+static struct doc_list *get_dir_content(const char *dir_path, const char *str, 
+										bool ignore, bool recursive)
+{
+	struct doc_list *doc_list_begin = NULL;
+	struct doc_list *current_node = NULL;
+	struct dirent *entry;
+	struct stat stbuf;
+	char *new_path;
+	DIR *dp;
+
+	if ((dp = opendir_inf(dir_path))) {
+		errno = 0;
+
+		while ((entry = readdir_inf(dp))) {
+			if (dot_entry(entry->d_name))
+				continue;
+
+			if (!(new_path = get_entry_path(dir_path, entry->d_name)))
+				goto free_doc_list;
+
+			if (stat_inf(new_path, &stbuf))
+				goto free_new_path;
+
+			if (S_ISDIR(stbuf.st_mode) 
+			  && check_str_occurrence(entry->d_name, str, ignore)) 
+				if (save_proper_dir_content(new_path, NULL, 0, recursive, 
+										    &doc_list_begin, &current_node))
+					goto free_new_path;
+			
+			free(new_path);
+		} 
+		catch_readdir_inf_err();
+
+		if (closedir_inf(dp) || prev_error) {
+			dp = NULL;
+			goto free_doc_list;
+			
+		}
+	} else {
+		goto error;
+	}
+
+	return doc_list_begin;
+
+free_new_path:
+	free(new_path);
+free_doc_list:
+	if (doc_list_begin)
+		free_doc_list(doc_list_begin);
+error:
+	if (dp)
+		closedir_inf(dp);
+
+	prev_error = 1;
+
+	return NULL;
+}
+
+
 void display_help(const char *name) 
 {
 	printf("Usage: %s [OPTIONS]... ARGUMENT\n", name);
@@ -1037,6 +1099,7 @@ void display_help(const char *name)
 	       " -c \t\t Count the existing documents with the passed string sequence in their names\n"
 	       " -l \t\t List the existing documents with the passed string sequence in their names\n"
 	       " -d \t\t Display details on the documents with the passed string sequence in their names\n"
+		   " -f \t\t Display directories (folders) contents with the passed string sequence in their names\n"
 		   " -o \t\t Open the founded document with the passed string sequence in it's name\n"
 	       " -R \t\t Disable recursive searching for the documents\n"
 	       " -C \t\t Disable colorful output\n"

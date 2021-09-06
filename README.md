@@ -132,8 +132,6 @@ After doing the previous steps you will be ready to enjoy your new document mana
 
 ## TODO
 * Adding support for long options.
-* Adding option for listing the content of specific directory.
-* Adding support for the user to add environment variable that changes the config file's path.
 
 
 ## Contributing
