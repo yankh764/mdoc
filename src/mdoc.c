@@ -91,11 +91,10 @@ static char *get_last_mod_time(const time_t);
 static void *alloc_stat_struct();
 static struct stat *get_stat_dynamic(const char *);
 static void save_doc_list_nodes(const struct doc_list *, struct doc_list **);
-static int sort_doc_list(struct doc_list **, struct doc_list **, const unsigned int);
-static long int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
-static void adjust_smallest_val(char **, char **, unsigned int *, unsigned int);
+static void sort_doc_list(struct doc_list **, struct doc_list **, const unsigned int);
+static unsigned int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
 static char *get_add_args_cp(const char *);
-static struct doc_list *get_dir_content(const char *, const char *, bool, bool);
+static bool alpha_cmp_no_dynamic(const char *, const char *); 
 
 
 
@@ -576,35 +575,28 @@ struct doc_list *sort_docs_names_alpha(const struct doc_list *ptr)
 	struct doc_list *sorted_array[nodes_num];
 
 	save_doc_list_nodes(ptr, unsorted_array);
-
-	if (sort_doc_list(unsorted_array, sorted_array, nodes_num))
-		return NULL;		
+	sort_doc_list(unsorted_array, sorted_array, nodes_num);
 
 	return get_doc_list_alpha(sorted_array, nodes_num);
 }
 
 
-static int sort_doc_list(struct doc_list **unsorted_array, 
-						 struct doc_list **sorted_array, 
-						 const unsigned int nodes_num)
+static void sort_doc_list(struct doc_list **unsorted_array, 
+						  struct doc_list **sorted_array, 
+						  const unsigned int nodes_num)
 {
-	unsigned int i;
-	long int ret;
+	unsigned int i, ret;
 
 	for (i=0; i<nodes_num; i++) {
-		if ((ret = get_smallest_doc_name_i(unsorted_array, nodes_num)) == -1)
-			return -1;
-
+		ret = get_smallest_doc_name_i(unsorted_array, nodes_num);
 		sorted_array[i] = unsorted_array[ret];
 		unsorted_array[ret] = NULL;
 	}
-
-	return 0;
 }
 
 
-static long int get_smallest_doc_name_i(struct doc_list **array, 
-										const unsigned int nodes_num)
+static unsigned int get_smallest_doc_name_i(struct doc_list **array, 
+											const unsigned int nodes_num)
 {
 	/* 
      * I initialized smallest_i to zero get rid of the 
@@ -621,37 +613,44 @@ static long int get_smallest_doc_name_i(struct doc_list **array,
 			continue;
 
 		if (smallest) {
-			if (!(current = small_let_copy(array[i]->name)))
-				goto err_free_smallest;
+			current = array[i]->name;
 			/* If current word needs to come before smallest word */
-			if(alpha_cmp(smallest, current))
-				adjust_smallest_val(&smallest, &current, &smallest_i, i);
-			else
-				free(current);
+			if(alpha_cmp_no_dynamic(smallest, current)) {
+				smallest = current;
+				smallest_i = i;
+			}
 		} else {
-			if (!(smallest = small_let_copy(array[i]->name)))
-				goto err_out;
-
+			smallest = array[i]->name;
 			smallest_i = i;
 		}
 	}
-	free(smallest);
 
 	return smallest_i;
-
-err_free_smallest:
-	free(smallest);
-err_out:
-	return -1;
 }
 
 
-static void adjust_smallest_val(char **smallest, char **current, 
-								unsigned int *smallest_i, unsigned int current_i)
+/*
+ * Make a copy of assumed_smaller and word_to_check, convert it to lower 
+ * case and call the original alpha_cmp(). I'm using this method instead 
+ * of calling small_let_copy() which creates a dynamically allocated small 
+ * letter copy of the string so the function sort_docs_names_alpha() will
+ * be failure free.
+ */
+static bool alpha_cmp_no_dynamic(const char *assumed_smaller, 
+								 const char *word_to_check) 
 {
-	free(*smallest);
-	*smallest = *current;
-	*smallest_i = current_i;
+	const size_t assumed_smaller_len = strlen(assumed_smaller) + 1;
+	const size_t word_to_check_len = strlen(word_to_check) + 1;
+	char assumed_smaller_cp[assumed_smaller_len];
+	char word_to_check_cp[word_to_check_len];
+
+	memcpy(assumed_smaller_cp, assumed_smaller, assumed_smaller_len);
+	memcpy(word_to_check_cp, word_to_check, word_to_check_len);
+
+	convert_to_lower(assumed_smaller_cp);
+	convert_to_lower(word_to_check_cp);
+
+	return alpha_cmp(assumed_smaller_cp, word_to_check_cp);
 }
 
 
@@ -1005,69 +1004,6 @@ static int save_proper_dir_content(const char *dir_path,
 }
 
 
-/*
- * Get dir's content that exists in the documents  
- * dir path and has str sequence in it's name
- */
-static struct doc_list *get_dir_content(const char *dir_path, const char *str, 
-										bool ignore, bool recursive)
-{
-	struct doc_list *doc_list_begin = NULL;
-	struct doc_list *current_node = NULL;
-	struct dirent *entry;
-	struct stat stbuf;
-	char *new_path;
-	DIR *dp;
-
-	if ((dp = opendir_inf(dir_path))) {
-		errno = 0;
-
-		while ((entry = readdir_inf(dp))) {
-			if (dot_entry(entry->d_name))
-				continue;
-
-			if (!(new_path = get_entry_path(dir_path, entry->d_name)))
-				goto free_doc_list;
-
-			if (stat_inf(new_path, &stbuf))
-				goto free_new_path;
-
-			if (S_ISDIR(stbuf.st_mode) 
-			  && check_str_occurrence(entry->d_name, str, ignore)) 
-				if (save_proper_dir_content(new_path, NULL, 0, recursive, 
-										    &doc_list_begin, &current_node))
-					goto free_new_path;
-			
-			free(new_path);
-		} 
-		catch_readdir_inf_err();
-
-		if (closedir_inf(dp) || prev_error) {
-			dp = NULL;
-			goto free_doc_list;
-			
-		}
-	} else {
-		goto error;
-	}
-
-	return doc_list_begin;
-
-free_new_path:
-	free(new_path);
-free_doc_list:
-	if (doc_list_begin)
-		free_doc_list(doc_list_begin);
-error:
-	if (dp)
-		closedir_inf(dp);
-
-	prev_error = 1;
-
-	return NULL;
-}
-
-
 void display_help(const char *name) 
 {
 	printf("Usage: %s [OPTIONS]... ARGUMENT\n", name);
@@ -1087,7 +1023,6 @@ void display_help(const char *name)
 	       " -c \t\t Count the existing documents with the passed string sequence in their names\n"
 	       " -l \t\t List the existing documents with the passed string sequence in their names\n"
 	       " -d \t\t Display details on the documents with the passed string sequence in their names\n"
-		   " -f \t\t Display directories (folders) contents with the passed string sequence in their names\n"
 		   " -o \t\t Open the founded document with the passed string sequence in it's name\n"
 	       " -R \t\t Disable recursive searching for the documents\n"
 	       " -C \t\t Disable colorful output\n"

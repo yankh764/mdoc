@@ -11,5 +11,6 @@ unsigned int space_to_null(char *);
 char *strcpy_dynamic(const char *);
 bool alpha_cmp(const char *, const char *);
 char *small_let_copy(const char *);
+void convert_to_lower(char *);
 
 #endif

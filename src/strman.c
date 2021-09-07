@@ -14,10 +14,6 @@
 #include "strman.h"
 
 
-/* Static Functions Prototype */
-static void convert_to_lower(char *);
-
-
 /*
  * Make a small letters copy of str.
  */
@@ -41,7 +37,7 @@ char *small_let_copy(const char *str)
 }
 
 
-static void convert_to_lower(char *str) 
+void convert_to_lower(char *str) 
 {
 	unsigned int i;
 

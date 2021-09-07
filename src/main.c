@@ -39,7 +39,6 @@ static void opts_cleanup(struct users_configs *, struct doc_list *);
 static void big_docs_num_error();
 static struct doc_list *rearrange_if_needed(struct doc_list *, bool, bool); 
 static int list_opt(const char *, bool, bool, bool, bool, bool);
-static int numerous_opening(const struct users_configs *, struct doc_list *, bool, bool, bool);
 static int open_opt(const char *, bool, bool, bool, bool, bool, bool);
 static int open_doc_list(const struct users_configs *, const struct doc_list *, bool);
 static int details_opt(const char *, bool, bool, bool, bool, bool);
@@ -131,9 +130,7 @@ static struct doc_list *rearrange_if_needed(struct doc_list *list,
     struct doc_list *rearranged = list;
 
     if (sort)
-        if (!(rearranged = sort_docs_names_alpha(rearranged)))
-            return NULL;
-    
+        rearranged = sort_docs_names_alpha(rearranged);
     if (reverse)
         rearranged = reverse_doc_list(rearranged);
 
@@ -144,16 +141,17 @@ static struct doc_list *rearrange_if_needed(struct doc_list *list,
 static int list_opt(const char *str, bool ignore, bool rec, 
                     bool color, bool sort, bool reverse) 
 {
-    struct doc_list *list, *rearranged;
     struct users_configs *configs;
+    struct doc_list *list;
     int retval = -1;
     
     if ((configs = get_configs())) {
-        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if ((rearranged = rearrange_if_needed(list, sort, reverse))) {
-                display_docs_names(rearranged, color);
+        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, 
+                                             str, ignore, rec))) {
+                list = rearrange_if_needed(list, sort, reverse);
+                display_docs_names(list, color);
                 retval = 0;
-            }
+        }
         opts_cleanup(configs, list);
     }
 
@@ -194,12 +192,14 @@ static int open_opt(const char *str, bool ignore, bool rec, bool color,
     if ((configs = get_configs())) {
         if ((list = search_for_doc_multi_dir(configs->docs_dir_path, 
                                              str, ignore, rec))) {
-            if (numerous)
-                retval = numerous_opening(configs, list, color, sort, reverse);
-            else if (count_doc_list_nodes(list) == 1)
+            if (numerous) {
+                list = rearrange_if_needed(list, sort, reverse);
                 retval = open_doc_list(configs, list, color);
-            else 
-                big_docs_num_error();   
+            } else if (count_doc_list_nodes(list) == 1) {
+                retval = open_doc_list(configs, list, color);
+            } else {
+                big_docs_num_error();
+            }
         }
         opts_cleanup(configs, list);
     }
@@ -214,31 +214,19 @@ static void big_docs_num_error() {
 }
 
 
-static int numerous_opening(const struct users_configs *configs, 
-                            struct doc_list *list,
-                            bool color, bool sort, bool reverse) 
-{
-    struct doc_list *rearranged;
-
-    if (!(rearranged = rearrange_if_needed(list, sort, reverse)))
-        return -1;
-    
-    return open_doc_list(configs, rearranged, color);
-}
-
-
 static int details_opt(const char *str, bool ignore, bool rec, 
                        bool color, bool sort, bool reverse) 
 {
-    struct doc_list *list, *rearranged;
     struct users_configs *configs;
+    struct doc_list *list;
     int retval = -1;
 
     if ((configs = get_configs())) {
-        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, str, ignore, rec)))
-            if ((rearranged = rearrange_if_needed(list, sort, reverse)))
-                retval = print_docs_details(rearranged, color);
-
+        if ((list = search_for_doc_multi_dir(configs->docs_dir_path, 
+                                             str, ignore, rec))) {
+            list = rearrange_if_needed(list, sort, reverse);
+            retval = print_docs_details(list, color);
+        }
         opts_cleanup(configs, list);
     }
     
