@@ -84,7 +84,6 @@ static struct doc_list *free_doc_list_node(struct doc_list *);
 static struct doc_list *save_doc(const char *, const char *, const struct stat *);
 static int save_doc_to_proper_var(const char *, const char *, const struct stat *,  struct doc_list **, struct doc_list **);
 static void free_and_null_doc_list(struct doc_list **); 
-static void catch_readdir_inf_err();
 static void print_doc_name(const char *, bool);
 static void print_doc_name_color(const char *);
 static void print_doc_name_no_color(const char *);
@@ -108,8 +107,11 @@ static void *alloc_doc_list()
 
 void free_doc_list(struct doc_list *ptr) 
 {
-	while ((ptr = free_doc_list_node(ptr)))
-		;
+	unsigned int nodes_num = count_doc_list_nodes(ptr);
+	unsigned int i;
+
+	for (i=0; i<nodes_num; i++)
+		ptr = free_doc_list_node(ptr);
 }
 
 
@@ -192,14 +194,14 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 				 * be already freed at the end of the loop. Only structs of 
 				 * doc_list may be allocated, so free them.
 				 */
-				goto free_docs_lists;
+				goto err_free_docs_lists;
 			
 			if (!(stbuf = get_stat_dynamic(new_path)))
 				/* 
 				 * Failed to allocate stbuf, so free the not passed to a node
 				 * new_path then continue to the rest of the errors labels.
 				 */
-				goto free_new_path;
+				goto err_free_new_path;
 
 			if (S_ISDIR(stbuf->st_mode)) {
 				if (recursive)
@@ -210,7 +212,7 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 						 * a doc_list node. So jump to the first label on the errors
 						 * cleanup and start freeing all the allocated variables.
 						 */
-						goto free_stbuf;
+						goto err_free_stbuf;
 			} else if (S_ISREG(stbuf->st_mode)) {
 				if (check_str_occurrence(entry->d_name, str, ignore_case)) {
 					if (save_doc_to_proper_var(new_path, entry->d_name, stbuf, 
@@ -220,7 +222,7 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 						 * a doc_list node. So jump to the first label on the errors
 						 * cleanup and start freeing all the allocated variables.
 						 */
-						goto free_stbuf;
+						goto err_free_stbuf;
 
 					continue;
 				} 
@@ -228,38 +230,35 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 			free(new_path);
 			free(stbuf);
 		}
-		catch_readdir_inf_err();
-
-		if (closedir_inf(dp) || prev_error) {
+		if (closedir_inf(dp) || errno) {
 			dp = NULL;
 			/* 
 			 * The not passed (to a doc_list node) new_path and stbuf would
 			 * be already freed at the end of the loop. Only structs of 
 			 * doc_list may be allocated, so free them.
 			 */
-			goto free_docs_lists;
+			goto err_free_docs_lists;
 		}
 	} else {
 		/* 
 		 * No variables were allocated, just mark
 		 * that an error occured and return NULL.
 		 */
-		goto error;	
+		goto err_out;	
 	}
 
 	return search_for_doc_retval(current_node, doc_list_begin, doc_list_rec_begin);
 
-/* ERRORS CLEANUP */
-free_stbuf:
+err_free_stbuf:
 	free(stbuf);
-free_new_path:
+err_free_new_path:
 	free(new_path);
-free_docs_lists:
+err_free_docs_lists:
 	if (doc_list_begin)
 		free_doc_list(doc_list_begin);
 	if (doc_list_rec_begin)
 		free_doc_list(doc_list_rec_begin);
-error:	
+err_out:	
 	if (dp)
 		closedir_inf(dp);
 	
@@ -374,13 +373,6 @@ static struct doc_list *search_for_doc_retval(struct doc_list *current_node,
 	} else {
 		return NULL;
 	}
-}
-
-
-static void catch_readdir_inf_err()
-{
-	if (errno)
-		prev_error = 1;
 }
 
 
@@ -630,11 +622,7 @@ static long int get_smallest_doc_name_i(struct doc_list **array,
 
 		if (smallest) {
 			if (!(current = small_let_copy(array[i]->name)))
-				/* 
-				 * smallest is allocated, so goto 
-				 * fail_alloc_current and free it
-				 */
-				goto fail_alloc_current;
+				goto err_free_smallest;
 			/* If current word needs to come before smallest word */
 			if(alpha_cmp(smallest, current))
 				adjust_smallest_val(&smallest, &current, &smallest_i, i);
@@ -642,7 +630,7 @@ static long int get_smallest_doc_name_i(struct doc_list **array,
 				free(current);
 		} else {
 			if (!(smallest = small_let_copy(array[i]->name)))
-				goto error;
+				goto err_out;
 
 			smallest_i = i;
 		}
@@ -651,9 +639,9 @@ static long int get_smallest_doc_name_i(struct doc_list **array,
 
 	return smallest_i;
 
-fail_alloc_current:
+err_free_smallest:
 	free(smallest);
-error:
+err_out:
 	return -1;
 }
 
