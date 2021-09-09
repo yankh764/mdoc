@@ -79,11 +79,10 @@ static void print_last_mod_time_no_color(const char *);
 static void print_doc_modes(const mode_t, bool);
 static void print_doc_modes_color(const mode_t); 
 static void print_doc_modes_no_color(const mode_t); 
-static int save_proper_dir_content(const char *, const char*, bool, bool, struct doc_list **, struct doc_list **);
+static int search_for_doc_rec(const char *, const char*, bool, bool, struct doc_list **, struct doc_list **);
 static struct doc_list *free_doc_list_node(struct doc_list *);
 static struct doc_list *save_doc(const char *, const char *, const struct stat *);
 static int save_doc_to_proper_var(const char *, const char *, const struct stat *,  struct doc_list **, struct doc_list **);
-static void free_and_null_doc_list(struct doc_list **); 
 static void print_doc_name(const char *, bool);
 static void print_doc_name_color(const char *);
 static void print_doc_name_no_color(const char *);
@@ -97,6 +96,7 @@ static char *get_add_args_cp(const char *);
 static bool alpha_cmp_no_dynamic(const char *, const char *); 
 static struct doc_list *get_dir_content(const char *, const char *, bool, bool); 
 static char *get_dirs_path_cp(const char *);
+static struct doc_list *get_dir_content_multi_dir_split(char *, const char *, bool, bool);
 
 
 
@@ -206,8 +206,8 @@ static struct doc_list *search_for_doc(const char *dir_path, const char *str,
 
 			if (S_ISDIR(stbuf->st_mode)) {
 				if (recursive)
-					if (save_proper_dir_content(new_path, str, ignore_case, recursive, 
-										        &doc_list_rec_begin, &current_node_rec))
+					if (search_for_doc_rec(new_path, str, ignore_case, recursive, 
+										   &doc_list_rec_begin, &current_node_rec))
 						/*
 						 * Both stbuf and new_path are allocated and not passed to
 						 * a doc_list node. So jump to the first label on the errors
@@ -316,10 +316,6 @@ static void adjust_doc_list_members(struct doc_list *current_node,
 	current_node->path = (char *) doc_path;
 	current_node->name = (char *) doc_name;
 	current_node->stbuf = (void *) statbuf;
-	/* 
-	 * Mark the next node as empty in case 
-	 * the current one is the last one 
-	 */
 	current_node->next = NULL;
 }
 
@@ -367,10 +363,8 @@ static struct doc_list *search_for_doc_retval(struct doc_list *current_node,
 		if (doc_list_rec_begin)
 			current_node->next = doc_list_rec_begin;
 		return doc_list_begin;
-	
 	} else if (doc_list_rec_begin) {
 		return doc_list_rec_begin;
-	
 	} else {
 		return NULL;
 	}
@@ -648,7 +642,7 @@ static bool alpha_cmp_no_dynamic(const char *assumed_smaller,
 
 	memcpy(assumed_smaller_cp, assumed_smaller, assumed_smaller_len);
 	memcpy(word_to_check_cp, word_to_check, word_to_check_len);
-
+	
 	convert_to_lower(assumed_smaller_cp);
 	convert_to_lower(word_to_check_cp);
 
@@ -758,22 +752,17 @@ static struct doc_list *search_for_doc_multi_dir_split(char *dirs_path,
 
 	for (; (ret = space_to_null(dirs_path)); dirs_path+=ret)
 		if (*dirs_path != '\0') 
-			if (save_proper_dir_content(dirs_path, str, ignore_case, rec, 
-			 					        &doc_list_begin, &current_node)) {
-				if (doc_list_begin)
-					free_and_null_doc_list(&doc_list_begin);
-
-				break;
-			}
+			if (search_for_doc_rec(dirs_path, str, ignore_case, rec, 
+			 					   &doc_list_begin, &current_node))
+				goto err_out;
 
 	return doc_list_begin;
-}
 
+err_out:
+	if (doc_list_begin)
+		free_doc_list(doc_list_begin);
 
-static void free_and_null_doc_list(struct doc_list **ptr) 
-{
-	free_doc_list(*ptr);
-	*ptr = NULL;
+	return NULL;
 }
 
 
@@ -938,6 +927,7 @@ static void print_last_mod_time_no_color(const char *buffer)
 	printf("[TIME] %s", buffer);	
 }
 
+
 static void print_doc_modes(const mode_t mode, bool color) 
 {
 	if (color)
@@ -1003,11 +993,10 @@ static void print_doc_modes_no_color(const mode_t mode)
 }
 
 
-static int save_proper_dir_content(const char *dir_path,
-								   const char *str,
-								   bool ignore, bool rec,
-								   struct doc_list **beginning,
-								   struct doc_list **current_node)
+static int search_for_doc_rec(const char *dir_path, const char *str,
+							  bool ignore, bool rec,
+							  struct doc_list **beginning,
+							  struct doc_list **current_node)
 {
 	if (!(*beginning)) {
 		if ((*beginning = search_for_doc(dir_path, str, ignore, rec)))
@@ -1055,8 +1044,8 @@ static struct doc_list *get_dir_content(const char *dir_path, const char *str,
 
 			if (S_ISDIR(stbuf.st_mode) 
 			  && check_str_occurrence(entry->d_name, str, ignore)) 
-				if (save_proper_dir_content(new_path, NULL, 0, recursive, 
-										    &doc_list_begin, &current_node))
+				if (search_for_doc_rec(new_path, NULL, 0, recursive, 
+									   &doc_list_begin, &current_node))
 					goto err_free_new_path;
 			
 			free(new_path);
@@ -1087,11 +1076,44 @@ err_out:
 }
 
 
-struct doc_list *get_dir_content_multi_dir(const char *dir_path, 
+struct doc_list *get_dir_content_multi_dir(const char *dirs_path, 
 										   const char *str, bool ignore, 
 										   bool recursive) 
 {
+	struct doc_list *list = NULL;
+	char *dirs_path_cp;
 
+	if ((dirs_path_cp = get_dirs_path_cp(dirs_path))) {
+		list = get_dir_content_multi_dir_split(dirs_path_cp, str, ignore, recursive);
+		free(dirs_path_cp);
+	}
+
+	return list;
+}
+
+
+static struct doc_list *get_dir_content_multi_dir_split(char *dirs_path, 
+														const char *str, 
+														bool ignore, 
+														bool recursive)
+{
+	struct doc_list *doc_list_begin = NULL;
+	struct doc_list *current_node;
+	unsigned int ret;
+
+	for (; (ret = space_to_null(dirs_path)); dirs_path+=ret)
+		if (*dirs_path != '\0')
+			//if (save_proper_dir_content(dirs_path, str, ignore, recursive, 
+			//							&doc_list_begin, &current_node))
+			//	goto err_out;
+			;
+	return doc_list_begin;
+
+err_out:
+	if (doc_list_begin)
+		free_doc_list(doc_list_begin);
+
+	return NULL;
 }
 
 
@@ -1104,19 +1126,20 @@ void display_help(const char *name)
 		   "\n"
 		   
 		   "Available options:\n"
-	       " -h \t\t Display this help message\n"
-	       " -g \t\t Generate new configurations file\n"
-	       " -s \t\t Sort the founded documents alphabetically\n"
-	       " -r \t\t Reverse the order of the founded documents\n"
-	       " -a \t\t Include all documents\n"
-	       " -i \t\t Ignore case distinctions while searching for the documents\n"
-	       " -n \t\t Allow numerous documents opening (execution)\n"
-	       " -c \t\t Count the existing documents with the passed string sequence in their names\n"
-	       " -l \t\t List the existing documents with the passed string sequence in their names\n"
-	       " -d \t\t Display details on the documents with the passed string sequence in their names\n"
-		   " -o \t\t Open the founded document with the passed string sequence in it's name\n"
-	       " -R \t\t Disable recursive searching for the documents\n"
-	       " -C \t\t Disable colorful output\n"
+	       " -h \t Display this help message\n"
+	       " -g \t Generate new configurations file\n"
+	       " -s \t Sort the founded documents alphabetically\n"
+	       " -r \t Reverse the order of the founded documents\n"
+	       " -a \t Include all documents\n"
+	       " -i \t Ignore case distinctions while searching for the documents\n"
+	       " -n \t Allow numerous documents opening (execution)\n"
+	       " -c \t Count the existing documents with the passed string sequence in their names\n"
+	       " -l \t List the existing documents with the passed string sequence in their names\n"
+	       " -d \t Display details on the documents with the passed string sequence in their names\n"
+		   " -f \t Display directorie's (folder's) contents with the passed string sequence in their names\n"
+		   " -o \t Open the founded document with the passed string sequence in it's name\n"
+	       " -R \t Disable recursive searching for the documents\n"
+	       " -C \t Disable colorful output\n"
            
 		   "\n\n"
 	       
