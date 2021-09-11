@@ -17,7 +17,6 @@ struct doc_list {
 	struct doc_list *next;
 };
 
-
 struct doc_list *sort_docs_names_alpha(const struct doc_list *);
 void free_doc_list(struct doc_list *);
 void display_doc_name(const char *, bool);

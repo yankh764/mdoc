@@ -209,7 +209,7 @@ static int open_opt(const char *str, bool ignore, bool rec, bool color,
 
 
 static void big_docs_num_error() {
-    fprintf(stderr, "%s: can't open document: Several documents were found\n", prog_name_inf);
+    fprintf(stderr, "%s: can't open file: Several files were found\n", prog_name_inf);
     fprintf(stderr, "Try '%s -h' for more information.\n", prog_name_inf);
 }
 
