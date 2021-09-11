@@ -94,9 +94,7 @@ static void sort_doc_list(struct doc_list **, struct doc_list **, const unsigned
 static unsigned int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
 static char *get_add_args_cp(const char *);
 static bool alpha_cmp_no_dynamic(const char *, const char *); 
-//static struct doc_list *get_dir_content(const char *, const char *, bool, bool); 
 static char *get_dirs_path_cp(const char *);
-//static struct doc_list *get_dir_content_multi_dir_split(char *, const char *, bool, bool);
 static void catch_readdir_inf_err();
 
 
@@ -1014,119 +1012,11 @@ static int search_for_doc_rec(const char *dir_path, const char *str,
 }
 
 
-/*
- * Get dir's content that exists in the documents  
- * dir path and has str sequence in it's name
- * 
-struct doc_list *get_dir_content(const char *dir_path, const char *str, 
-										bool ignore, bool recursive)
-{
-	struct doc_list *doc_list_begin = NULL;
-	struct doc_list *current_node = NULL;
-	struct dirent *entry;
-	struct stat stbuf;
-	char *new_path;
-	DIR *dp;
-
-	if ((dp = opendir_inf(dir_path))) {
-		* 
-		 * To distinguish end of stream 
-		 * from an error in readdir_inf()
-		 *
-		errno = 0;
-
-		while ((entry = readdir_inf(dp))) {
-			if (dot_entry(entry->d_name))
-				continue;
-
-			if (!(new_path = get_entry_path(dir_path, entry->d_name)))
-				goto err_free_doc_list;
-
-			if (stat_inf(new_path, &stbuf))
-				goto err_free_new_path;
-
-			if (S_ISDIR(stbuf.st_mode) 
-			  && check_str_occurrence(entry->d_name, str, ignore)) 
-				if (search_for_doc_rec(new_path, NULL, 0, recursive, 
-									   &doc_list_begin, &current_node))
-					goto err_free_new_path;
-			
-			free(new_path);
-		} 
-		catch_readdir_inf_err();
-
-		if (closedir_inf(dp) || prev_error) {
-			dp = NULL;
-			goto err_free_doc_list;
-			
-		}
-	} else {
-		goto err_out;
-	}
-
-	return doc_list_begin;
-
-err_free_new_path:
-	free(new_path);
-err_free_doc_list:
-	if (doc_list_begin)
-		free_doc_list(doc_list_begin);
-err_out:
-	if (dp)
-		closedir_inf(dp);
-
-	prev_error = 1;
-
-	return NULL;
-}*/
-
-
 static void catch_readdir_inf_err()
 {
 	if (errno)
 		prev_error = 1;
 }
-
-
-/*struct doc_list *get_dir_content_multi_dir(const char *dirs_path, 
-										   const char *str, bool ignore, 
-										   bool recursive) 
-{
-	struct doc_list *list = NULL;
-	char *dirs_path_cp;
-
-	if ((dirs_path_cp = get_dirs_path_cp(dirs_path))) {
-		list = get_dir_content_multi_dir_split(dirs_path_cp, str, ignore, recursive);
-		free(dirs_path_cp);
-	}
-
-	return list;
-}*/
-
-/*
-static struct doc_list *get_dir_content_multi_dir_split(char *dirs_path, 
-														const char *str, 
-														bool ignore, 
-														bool recursive)
-{
-	struct doc_list *doc_list_begin = NULL;
-	struct doc_list *current_node;
-	unsigned int ret;
-
-	for (; (ret = space_to_null(dirs_path)); dirs_path+=ret)
-		if (*dirs_path != '\0')
-			if (save_proper_dir_content(dirs_path, str, ignore, recursive, 
-										&doc_list_begin, &current_node))
-				goto err_out;
-			
-	return doc_list_begin;
-
-err_out:
-	if (doc_list_begin)
-		free_doc_list(doc_list_begin);
-
-	return NULL;
-}*/
 
 
 void display_help(const char *name) 
@@ -1148,7 +1038,6 @@ void display_help(const char *name)
 	       " -c \t Count the existing documents with the passed string sequence in their names\n"
 	       " -l \t List the existing documents with the passed string sequence in their names\n"
 	       " -d \t Display details on the documents with the passed string sequence in their names\n"
-//		   " -f \t Display directorie's (folder's) contents with the passed string sequence in their names\n"
 		   " -o \t Open the founded document with the passed string sequence in it's name\n"
 	       " -R \t Disable recursive searching for the documents\n"
 	       " -C \t Disable colorful output\n"
