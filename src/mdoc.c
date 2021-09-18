@@ -94,9 +94,9 @@ static void sort_doc_list(struct doc_list **, struct doc_list **, const unsigned
 static unsigned int get_smallest_doc_name_i(struct doc_list **, const unsigned int);
 static char *get_add_args_cp(const char *);
 static bool alpha_cmp_no_dynamic(const char *, const char *); 
-//static struct doc_list *get_dir_content(const char *, const char *, bool, bool); 
+static struct doc_list *get_dir_content(const char *, const char *, bool, bool); 
 static char *get_dirs_path_cp(const char *);
-//static struct doc_list *get_dir_content_multi_dir_split(char *, const char *, bool, bool);
+static struct doc_list *get_dir_content_multi_dir_split(char *, const char *, bool, bool);
 static void catch_readdir_inf_err();
 
 
@@ -1017,7 +1017,7 @@ static int search_for_doc_rec(const char *dir_path, const char *str,
 /*
  * Get dir's content that exists in the documents  
  * dir path and has str sequence in it's name
- * 
+ */ 
 struct doc_list *get_dir_content(const char *dir_path, const char *str, 
 										bool ignore, bool recursive)
 {
@@ -1029,10 +1029,10 @@ struct doc_list *get_dir_content(const char *dir_path, const char *str,
 	DIR *dp;
 
 	if ((dp = opendir_inf(dir_path))) {
-		* 
+		/* 
 		 * To distinguish end of stream 
 		 * from an error in readdir_inf()
-		 *
+		 */
 		errno = 0;
 
 		while ((entry = readdir_inf(dp))) {
@@ -1078,7 +1078,7 @@ err_out:
 	prev_error = 1;
 
 	return NULL;
-}*/
+}
 
 
 static void catch_readdir_inf_err()
@@ -1088,7 +1088,7 @@ static void catch_readdir_inf_err()
 }
 
 
-/*struct doc_list *get_dir_content_multi_dir(const char *dirs_path, 
+struct doc_list *get_dir_content_multi_dir(const char *dirs_path, 
 										   const char *str, bool ignore, 
 										   bool recursive) 
 {
@@ -1101,9 +1101,9 @@ static void catch_readdir_inf_err()
 	}
 
 	return list;
-}*/
+}
 
-/*
+
 static struct doc_list *get_dir_content_multi_dir_split(char *dirs_path, 
 														const char *str, 
 														bool ignore, 
@@ -1126,7 +1126,7 @@ err_out:
 		free_doc_list(doc_list_begin);
 
 	return NULL;
-}*/
+}
 
 
 void display_help(const char *name) 
@@ -1148,7 +1148,7 @@ void display_help(const char *name)
 	       " -c \t Count the existing documents with the passed string sequence in their names\n"
 	       " -l \t List the existing documents with the passed string sequence in their names\n"
 	       " -d \t Display details on the documents with the passed string sequence in their names\n"
-//		   " -f \t Display directorie's (folder's) contents with the passed string sequence in their names\n"
+		   " -f \t Display directorie's (folder's) contents with the passed string sequence in their names\n"
 		   " -o \t Open the founded document with the passed string sequence in it's name\n"
 	       " -R \t Disable recursive searching for the documents\n"
 	       " -C \t Disable colorful output\n"
